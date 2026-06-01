@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Damage Report System</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#1a3a5c;--primary-light:#2a5a8c;--accent:#e8a020;--accent-light:#f5c05a;--bg:#f4f6f9;--card:#ffffff;--text:#1a2332;--text-muted:#6b7a8d;--border:#dde3ed;--success:#1e8a4a;--success-bg:#e6f5ed;--danger:#c0392b;--danger-bg:#fdeaea;--warning:#d68910;--warning-bg:#fef9e7;--info:#1565c0;--info-bg:#e3f0ff;--radius:10px;--shadow:0 2px 12px rgba(26,58,92,0.08);--shadow-lg:0 8px 32px rgba(26,58,92,0.14)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.site-header{background:var(--primary);color:white;position:sticky;top:0;z-index:100;box-shadow:0 2px 16px rgba(0,0,0,0.18)}
+.header-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:14px 24px;flex-wrap:wrap;gap:10px}
+.logo-area{display:flex;align-items:center;gap:14px}
+.logo-badge{background:var(--accent);color:var(--primary);font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15px;padding:6px 14px;border-radius:6px;letter-spacing:1px}
+.site-title{font-size:15px;font-weight:600;opacity:.92}
+.site-subtitle{font-size:11px;opacity:.65;margin-top:1px;color:var(--accent-light)}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.user-pill{background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:20px;padding:5px 14px;font-size:12px;color:white;display:flex;align-items:center;gap:6px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0}
+.btn-logout{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.25);color:white;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit}
+.btn-hdr{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:white;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit}
+.screen{display:none}.screen.active{display:block}
+/* AUTH */
+.auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a3a5c 0%,#2a5a8c 50%,#1a3a5c 100%);padding:24px}
+.auth-card{background:white;border-radius:16px;padding:40px 36px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.25)}
+.auth-badge{display:inline-block;background:var(--primary);color:var(--accent);font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:24px;padding:10px 20px;border-radius:10px;letter-spacing:2px;margin-bottom:10px}
+.tab-bar{display:flex;background:var(--bg);border-radius:8px;padding:4px;margin-bottom:24px}
+.tab-btn{flex:1;padding:9px;border:none;background:transparent;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text-muted);font-family:inherit;transition:all .2s}
+.tab-btn.active{background:white;color:var(--primary);box-shadow:0 1px 4px rgba(0,0,0,0.1)}
+/* FORMS */
+.form-group{margin-bottom:16px}
+label{display:block;font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+input[type=text],input[type=email],input[type=password],input[type=date],input[type=number],select,textarea{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;background:white;color:var(--text);outline:none;transition:border .2s}
+input:focus,select:focus,textarea:focus{border-color:var(--primary)}
+input[readonly]{background:var(--bg);color:var(--text-muted)}
+.btn-primary{width:100%;padding:12px;background:var(--primary);color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .2s}
+.btn-primary:hover{background:var(--primary-light)}
+.alert{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none}
+.alert.error{background:var(--danger-bg);color:var(--danger);display:block}
+.alert.success{background:var(--success-bg);color:var(--success);display:block}
+/* LAYOUT */
+.main-layout{max-width:1200px;margin:0 auto;padding:24px}
+.page-heading{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:var(--primary);margin-bottom:4px}
+.page-sub{color:var(--text-muted);font-size:13px;margin-bottom:20px}
+.card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);margin-bottom:20px;overflow:hidden}
+.card-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:#fafbfd;flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700;color:var(--primary)}
+.card-body{padding:20px}
+/* TABS NAV */
+.tabs-nav{display:flex;gap:4px;background:var(--bg);border-radius:8px;padding:4px;margin-bottom:20px;flex-wrap:wrap}
+.tabs-nav-btn{padding:9px 16px;border:none;background:transparent;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);font-family:inherit;transition:all .2s;white-space:nowrap}
+.tabs-nav-btn.active{background:var(--primary);color:white}
+/* BUTTONS */
+.btn-sm{padding:5px 11px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:opacity .2s}
+.btn-sm:hover{opacity:.8}
+.btn-add{padding:10px 18px;background:var(--accent);color:var(--primary);border:none;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px}
+.btn-add:hover{background:var(--accent-light)}
+.btn-view{background:var(--info-bg);color:var(--info)}
+.btn-pdf{background:var(--danger-bg);color:var(--danger)}
+.btn-word{background:var(--success-bg);color:var(--success)}
+.btn-edit{background:var(--warning-bg);color:var(--warning)}
+.btn-del{background:var(--danger-bg);color:var(--danger)}
+.btn-approve{background:var(--success-bg);color:var(--success)}
+.btn-outline{background:white;border:1.5px solid var(--border);color:var(--primary);padding:8px 16px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:500}
+.btn-outline:hover{background:var(--bg)}
+/* BADGES */
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700}
+.badge-pending{background:var(--warning-bg);color:var(--warning)}
+.badge-approved{background:var(--success-bg);color:var(--success)}
+.badge-engineer{background:var(--info-bg);color:var(--info)}
+.badge-admin{background:var(--primary);color:white}
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px}
+.stat-box{background:white;border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;text-align:center}
+.stat-num{font-size:26px;font-weight:700;color:var(--primary);font-family:'Space Grotesk',sans-serif}
+.stat-label{font-size:11px;color:var(--text-muted);margin-top:2px}
+/* PROJECT CARDS */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.project-card{background:white;border:1.5px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;transition:box-shadow .2s,border-color .2s}
+.project-card:hover{box-shadow:var(--shadow-lg);border-color:var(--primary-light)}
+.project-card.selected{border-color:var(--success);background:var(--success-bg)}
+/* TABLES */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#f0f3f8;color:var(--primary);font-weight:700;padding:10px 12px;text-align:left;border-bottom:2px solid var(--border);white-space:nowrap;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f8faff}
+/* MATERIALS */
+.mat-row{display:grid;grid-template-columns:3fr 1fr 1fr 1.5fr auto;gap:8px;margin-bottom:8px;align-items:center}
+@media(max-width:600px){.mat-row{grid-template-columns:1fr 1fr}}
+/* PHOTO UPLOAD */
+.photo-upload-box{border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s}
+.photo-upload-box:hover{border-color:var(--primary);background:#f8faff}
+.photo-preview{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.photo-thumb{position:relative;display:inline-block}
+.photo-thumb img{width:80px;height:80px;object-fit:cover;border-radius:8px;border:2px solid var(--border);display:block}
+.photo-thumb .rm-photo{position:absolute;top:-6px;right:-6px;background:var(--danger);color:white;border:none;border-radius:50%;width:20px;height:20px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+/* UPLOAD PROGRESS */
+.upload-bar-wrap{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:6px;display:none}
+.upload-bar-fill{height:100%;background:var(--primary);border-radius:2px;transition:width .3s;width:0%}
+/* LOGO UPLOAD */
+.logo-upload-box{border:2px dashed var(--border);border-radius:10px;padding:16px;text-align:center;cursor:pointer;color:var(--text-muted);font-size:13px;transition:border-color .2s}
+.logo-upload-box:hover{border-color:var(--primary)}
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal-box{background:white;border-radius:14px;width:100%;max-width:800px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+.modal-header{padding:16px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:#fafbfd;border-radius:14px 14px 0 0;position:sticky;top:0;z-index:1}
+.modal-title{font-size:15px;font-weight:700;color:var(--primary)}
+.modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1}
+.modal-body{padding:22px}
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;animation:slideIn .3s ease;max-width:340px;box-shadow:var(--shadow-lg)}
+.toast.ok{background:var(--success);color:white}
+.toast.err{background:var(--danger);color:white}
+@keyframes slideIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+/* LOADING */
+.loading-overlay{display:none;position:fixed;inset:0;background:rgba(255,255,255,0.85);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:12px;backdrop-filter:blur(2px)}
+.loading-overlay.show{display:flex}
+.spinner{border:3px solid var(--border);border-top:3px solid var(--primary);border-radius:50%;width:28px;height:28px;animation:spin .7s linear infinite}
+.loading-text{font-size:13px;color:var(--primary);font-weight:600}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* MISC */
+.divider{border:none;border-top:1px solid var(--border);margin:18px 0}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text-muted)}
+.empty-icon{font-size:3rem;display:block;margin-bottom:12px}
+.filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.filter-chip{padding:5px 14px;border-radius:20px;border:1.5px solid var(--border);background:white;color:var(--text-muted);cursor:pointer;font-size:12px;font-weight:600;transition:all .2s;font-family:inherit}
+.filter-chip.active{background:var(--primary);border-color:var(--primary);color:white}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+input[type=file]{display:none}
+@media(max-width:600px){.header-inner{flex-wrap:wrap}.main-layout{padding:14px}}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">Processing...</div>
+</div>
+
+<!-- ═══════════════ AUTH SCREEN ═══════════════ -->
+<div class="screen active" id="authScreen">
+<div class="auth-wrap">
+  <div style="width:100%;max-width:940px;margin:0 auto;display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;justify-content:center">
+
+  <div class="auth-card">
+    <div style="text-align:center;margin-bottom:28px">
+      <div class="auth-badge">DR</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:var(--primary);margin-top:8px">Site Damage Report System</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Submit and manage site damage reports</div>
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchAuthTab('login')">Login</button>
+      <button class="tab-btn" onclick="switchAuthTab('register')">Register</button>
+      <button class="tab-btn" onclick="switchAuthTab('admin')">Admin</button>
+    </div>
+
+    <div id="tabLogin">
+      <div class="alert" id="loginAlert"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="loginEmail" placeholder="your@email.com"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="loginPassword" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <button class="btn-primary" onclick="doLogin()">Sign In →</button>
+      <div style="text-align:center;margin-top:12px">
+        <button onclick="testConnection()" style="background:none;border:1px solid var(--border);color:var(--text-muted);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit">🔌 Test Connection</button>
+        <div id="connStatus" style="font-size:11px;margin-top:6px;color:var(--text-muted)"></div>
+      </div>
+    </div>
+
+    <div id="tabRegister" style="display:none">
+      <div class="alert" id="regAlert"></div>
+      <div class="form-group"><label>Full Name</label><input type="text" id="regName" placeholder="John Smith"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="regEmail" placeholder="your@email.com"></div>
+      <div class="form-group"><label>Password (min 6)</label><input type="password" id="regPassword" placeholder="Choose a password"></div>
+      <button class="btn-primary" onclick="doRegister()">Create Account →</button>
+    </div>
+
+    <div id="tabAdmin" style="display:none">
+      <div class="alert" id="adminAlert"></div>
+      <div class="form-group"><label>Admin Email</label><input type="email" id="adminEmail" placeholder="admin@damagesystem.com"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="adminPassword" placeholder="Admin password" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
+      <button class="btn-primary" onclick="doAdminLogin()">Admin Login →</button>
+    </div>
+  </div>
+
+  <!-- Guide panel -->
+  <div style="flex:1;min-width:260px;max-width:420px">
+    <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:14px;padding:24px;color:white">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;margin-bottom:16px">📋 Engineer Guide</div>
+      <div style="font-size:13px;line-height:1.8;opacity:.85">
+        <p style="margin-bottom:10px"><strong>1. Register</strong> with your work email and password.</p>
+        <p style="margin-bottom:10px"><strong>2. Select a project</strong> — admin must first create a project and assign a prefix.</p>
+        <p style="margin-bottom:10px"><strong>3. Fill the damage report</strong> with location, date, description, and materials damaged.</p>
+        <p style="margin-bottom:10px"><strong>4. Attach photos</strong> — up to 5 photos, uploaded directly to Google Drive so admin can view them from any device.</p>
+        <p><strong>5. Submit</strong> — report goes to admin for review and approval.</p>
+      </div>
+    </div>
+  </div>
+
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════ MAIN APP ═══════════════ -->
+<div class="screen" id="appScreen">
+<div class="site-header">
+  <div class="header-inner">
+    <div class="logo-area">
+      <div class="logo-badge">DR</div>
+      <div><div class="site-title">Site Damage Report System</div><div class="site-subtitle" id="appSubtitle">Loading...</div></div>
+    </div>
+    <div class="header-right">
+      <div class="user-pill"><div class="dot"></div><span id="headerUser">User</span></div>
+      <button class="btn-logout" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+</div>
+
+<!-- Engineer tabs -->
+<div id="engineerView" style="display:none">
+  <div class="main-layout" style="padding-bottom:0">
+    <div class="tabs-nav">
+      <button class="tabs-nav-btn active" id="engTab_submit" onclick="switchEngTab('submit')">📝 Submit Report</button>
+      <button class="tabs-nav-btn" id="engTab_mine" onclick="switchEngTab('mine')">📋 My Reports</button>
+    </div>
+  </div>
+
+  <!-- Submit Report tab -->
+  <div id="engPane_submit" class="main-layout">
+    <div class="card">
+      <div class="card-header"><div class="card-title">🏗 Select Project</div></div>
+      <div class="card-body">
+        <div id="projectPickerList"><div class="empty-state"><span class="empty-icon">📁</span><p>Loading projects...</p></div></div>
+        <div id="selectedProjectBanner" style="display:none;margin-top:14px;padding:12px 16px;background:var(--success-bg);border:1px solid var(--success);border-radius:8px;display:none;align-items:center;gap:12px"></div>
+      </div>
+    </div>
+
+    <div class="card" id="reportFormCard" style="display:none">
+      <div class="card-header"><div class="card-title">📝 New Damage Report</div></div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="form-group"><label>Reference No.</label><input type="text" id="fRefNo" readonly></div>
+          <div class="form-group"><label>Project</label><input type="text" id="fProjName" readonly></div>
+          <div class="form-group"><label>Location *</label><input type="text" id="fLocation" placeholder="e.g. Block A, Level 3"></div>
+          <div class="form-group"><label>Damage Date *</label><input type="date" id="fDate"></div>
+          <div class="form-group"><label>Time</label><input type="text" id="fTime" placeholder="e.g. After 6:00 PM"></div>
+          <div class="form-group"><label>Sub-Contractor</label><input type="text" id="fSubcon" placeholder="Sub-contractor name"></div>
+          <div class="form-group"><label>Main Contractor</label><input type="text" id="fMainCon" readonly></div>
+        </div>
+
+        <div class="form-group"><label>Description *</label><textarea id="fDesc" rows="4" placeholder="Describe what was damaged and how it happened..."></textarea></div>
+
+        <div class="divider"></div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--primary);margin-bottom:12px">📦 Damaged Materials</div>
+        <div id="matList">
+          <div class="mat-row">
+            <input type="text" placeholder="Material name" class="m-name">
+            <input type="text" placeholder="Qty" class="m-qty">
+            <input type="text" placeholder="Unit" class="m-unit">
+            <input type="text" placeholder="Cost (AED)" class="m-cost">
+            <button type="button" onclick="removeMat(this)" style="background:var(--danger-bg);color:var(--danger);border:none;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;">✕</button>
+          </div>
+        </div>
+        <button type="button" onclick="addMat()" class="btn-outline" style="margin-bottom:20px">➕ Add Row</button>
+
+        <div class="divider"></div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--primary);margin-bottom:8px">📷 Photos (max 5) — uploaded to Google Drive</div>
+        <div class="photo-upload-box" id="photoDropArea" onclick="document.getElementById('photoInput').click()">
+          <div style="font-size:2rem;margin-bottom:6px">📷</div>
+          <div style="font-weight:600;color:var(--primary)">Click to upload photos</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">JPEG · PNG · WEBP · Max 10MB each · Stored on Google Drive</div>
+        </div>
+        <input type="file" id="photoInput" multiple accept="image/*" onchange="handlePhotos(this)">
+        <div id="photoPreview" class="photo-preview"></div>
+        <div id="photoCount" style="font-size:12px;color:var(--text-muted);margin-top:6px"></div>
+        <div class="upload-bar-wrap" id="photoUploadBar"><div class="upload-bar-fill" id="photoUploadFill"></div></div>
+
+        <div class="divider"></div>
+        <div class="form-group"><label>Additional Notes</label><textarea id="fNotes" rows="2" placeholder="Any extra notes..."></textarea></div>
+
+        <button onclick="submitReport()" style="width:100%;padding:13px;background:var(--primary);color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .2s" onmouseover="this.style.background='#2a5a8c'" onmouseout="this.style.background='#1a3a5c'">
+          📤 Submit Damage Report
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- My Reports tab -->
+  <div id="engPane_mine" class="main-layout" style="display:none">
+    <div class="card">
+      <div class="card-header"><div class="card-title">📋 My Reports</div></div>
+      <div class="card-body">
+        <div class="filter-bar" id="myReportsFilter"></div>
+        <div class="table-wrap" id="myReportsTable"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Admin view -->
+<div id="adminView" style="display:none">
+  <div class="main-layout" style="padding-bottom:0">
+    <div class="tabs-nav">
+      <button class="tabs-nav-btn active" id="admTab_projects" onclick="switchAdmTab('projects')">🏗 Projects</button>
+      <button class="tabs-nav-btn" id="admTab_reports" onclick="switchAdmTab('reports')">📊 All Reports</button>
+      <button class="tabs-nav-btn" id="admTab_users" onclick="switchAdmTab('users')">👥 Users</button>
+    </div>
+  </div>
+
+  <div id="admPane_projects" class="main-layout">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">➕ Create Project</div>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="form-group"><label>Project Name *</label><input type="text" id="newProjName" placeholder="e.g. Site Alpha Tower"></div>
+          <div class="form-group"><label>Reference Prefix *</label><input type="text" id="newProjPrefix" placeholder="e.g. LOR-IMA-PDC" value="LOR-IMA-PDC"></div>
+          <div class="form-group"><label>Start Number</label><input type="number" id="newProjStart" value="1" min="1"></div>
+          <div class="form-group"><label>Main Contractor</label><input type="text" id="newProjContractor" placeholder="Contractor company"></div>
+        </div>
+        <div class="form-group">
+          <label>Company Logo</label>
+          <div class="logo-upload-box" onclick="document.getElementById('logoInput').click()">🏢 Click to upload logo (PNG/JPG)</div>
+          <input type="file" id="logoInput" accept="image/*" onchange="handleLogo(this)">
+          <img id="logoPreview" style="max-width:100px;max-height:60px;margin-top:8px;display:none">
+        </div>
+        <button onclick="createProject()" class="btn-add">💾 Create Project</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-title">📁 Projects</div></div>
+      <div class="card-body" id="projListWrap"><div class="empty-state"><span class="empty-icon">📁</span><p>No projects yet.</p></div></div>
+    </div>
+  </div>
+
+  <div id="admPane_reports" class="main-layout" style="display:none">
+    <div class="card">
+      <div class="card-header"><div class="card-title">📊 All Reports</div></div>
+      <div class="card-body">
+        <div class="filter-bar" id="allReportsFilter"></div>
+        <div class="table-wrap" id="allReportsTable"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="admPane_users" class="main-layout" style="display:none">
+    <div class="card">
+      <div class="card-header"><div class="card-title">👥 Users</div></div>
+      <div class="card-body" id="usersTableWrap"></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end appScreen -->
+
+<!-- ═══════════════ REPORT MODAL ═══════════════ -->
+<div class="modal-overlay" id="reportModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">📄 Damage Report</div>
+      <button class="modal-close" onclick="closeModal('reportModal')">✕</button>
+    </div>
+    <div class="modal-body" id="reportModalBody"></div>
+    <div style="padding:16px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+      <button onclick="exportPDF()" class="btn-sm btn-pdf" style="padding:9px 18px;font-size:13px">📥 PDF</button>
+      <button onclick="exportWord()" class="btn-sm btn-word" style="padding:9px 18px;font-size:13px">📄 Word</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+// ══════════════════════════════════════════
+// CONFIG — paste your deployed Apps Script URL here
+// ══════════════════════════════════════════
+const API_URL = 'https://script.google.com/macros/s/AKfycbyhEKME3dPXAuS8ZY2VszzeeeXV1XI7UKwoMRvzakiGLDOF1yB7Aj9ylGD0WxpLiNz4IA/exec';
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let currentUser    = null;
+let currentProject = null;
+let projects       = [];
+let allReports     = [];
+let pendingPhotos  = [];   // { file, dataUrl, filename, mimeType }
+let pendingLogo    = null; // { fileData, mimeType, fileName }
+let viewReport     = null;
+let myProjectFilter   = 'all';
+let allProjectFilter  = 'all';
+
+// ══════════════════════════════════════════
+// API — POST with Content-Type: text/plain
+// SAME AS INDUCTION PORTAL — proven to work
+// No CORS preflight, no URL size limit
+// ══════════════════════════════════════════
+async function api(payload) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    headers: { 'Content-Type': 'text/plain' }
+  });
+  return res.json();
+}
+
+// ══════════════════════════════════════════
+// UI HELPERS
+// ══════════════════════════════════════════
+function showLoading(msg) {
+  document.getElementById('loadingText').textContent = msg || 'Processing...';
+  document.getElementById('loadingOverlay').classList.add('show');
+}
+function hideLoading() { document.getElementById('loadingOverlay').classList.remove('show'); }
+
+function toast(msg, isErr) {
+  const t = document.createElement('div');
+  t.className = 'toast ' + (isErr ? 'err' : 'ok');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+function showAlert(id, msg, type) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'alert ' + type;
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function switchAuthTab(tab) {
+  ['login','register','admin'].forEach(t => {
+    document.querySelector(`.tab-btn:nth-child(${['login','register','admin'].indexOf(t)+1})`).classList.toggle('active', t === tab);
+    document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).style.display = t === tab ? '' : 'none';
+  });
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  try { return new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day:'2-digit', month:'long', year:'numeric' }); }
+  catch(e) { return d; }
+}
+
+function genRefNo() {
+  if (!currentProject) return '';
+  const next = (parseInt(currentProject.lastNumber) || 0) + 1;
+  return currentProject.prefix + '-DR-' + String(next).padStart(4, '0');
+}
+
+// ══════════════════════════════════════════
+// TEST CONNECTION
+// ══════════════════════════════════════════
+async function testConnection() {
+  const el = document.getElementById('connStatus');
+  el.textContent = '⏳ Testing...'; el.style.color = 'var(--text-muted)';
+  try {
+    const res = await api({ action: 'test' });
+    if (res.success) { el.textContent = '✅ ' + res.message; el.style.color = 'var(--success)'; }
+    else { el.textContent = '⚠️ ' + res.message; el.style.color = 'var(--warning)'; }
+  } catch(e) { el.textContent = '❌ ' + e.message; el.style.color = 'var(--danger)'; }
+}
+
+// ══════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════
+async function doLogin() {
+  const email    = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if (!email || !password) return showAlert('loginAlert', 'Enter email and password.', 'error');
+  showLoading('Signing in...');
+  try {
+    const res = await api({ action: 'login', email, password });
+    hideLoading();
+    if (res.success) { currentUser = res.user; initApp(); }
+    else showAlert('loginAlert', res.message || 'Login failed.', 'error');
+  } catch(e) { hideLoading(); showAlert('loginAlert', 'Connection error: ' + e.message, 'error'); }
+}
+
+async function doAdminLogin() {
+  const email    = document.getElementById('adminEmail').value.trim();
+  const password = document.getElementById('adminPassword').value;
+  if (!email || !password) return showAlert('adminAlert', 'Enter email and password.', 'error');
+  showLoading('Authenticating...');
+  try {
+    const res = await api({ action: 'login', email, password });
+    hideLoading();
+    if (res.success && res.user.role === 'admin') { currentUser = res.user; initApp(); }
+    else if (res.success) showAlert('adminAlert', 'This account is not admin.', 'error');
+    else showAlert('adminAlert', res.message || 'Invalid credentials.', 'error');
+  } catch(e) { hideLoading(); showAlert('adminAlert', 'Connection error: ' + e.message, 'error'); }
+}
+
+async function doRegister() {
+  const name     = document.getElementById('regName').value.trim();
+  const email    = document.getElementById('regEmail').value.trim();
+  const password = document.getElementById('regPassword').value;
+  if (!name || !email || !password) return showAlert('regAlert', 'Fill all fields.', 'error');
+  if (password.length < 6) return showAlert('regAlert', 'Password min 6 characters.', 'error');
+  showLoading('Creating account...');
+  try {
+    const res = await api({ action: 'register', name, email, password });
+    hideLoading();
+    if (res.success) { showAlert('regAlert', 'Registered! Please log in.', 'success'); setTimeout(() => switchAuthTab('login'), 2000); }
+    else showAlert('regAlert', res.message || 'Registration failed.', 'error');
+  } catch(e) { hideLoading(); showAlert('regAlert', 'Connection error: ' + e.message, 'error'); }
+}
+
+function doLogout() {
+  currentUser = null; currentProject = null; projects = []; allReports = [];
+  pendingPhotos = []; pendingLogo = null;
+  showScreen('authScreen'); switchAuthTab('login');
+}
+
+// ══════════════════════════════════════════
+// APP INIT
+// ══════════════════════════════════════════
+async function initApp() {
+  showScreen('appScreen');
+  document.getElementById('headerUser').textContent = currentUser.fullName + ' (' + currentUser.role + ')';
+  document.getElementById('appSubtitle').textContent = currentUser.role === 'admin' ? 'Admin Dashboard' : 'Engineer Portal';
+  if (currentUser.role === 'admin') {
+    document.getElementById('adminView').style.display = 'block';
+    document.getElementById('engineerView').style.display = 'none';
+    await Promise.all([loadProjects(), loadReports(), loadUsers()]);
+  } else {
+    document.getElementById('adminView').style.display = 'none';
+    document.getElementById('engineerView').style.display = 'block';
+    await Promise.all([loadProjects(), loadReports()]);
+  }
+  toast('Welcome, ' + currentUser.fullName + '!');
+}
+
+// ══════════════════════════════════════════
+// PROJECTS
+// ══════════════════════════════════════════
+async function loadProjects() {
+  try {
+    const res = await api({ action: 'getProjects' });
+    if (res.success) {
+      projects = res.projects || [];
+      renderProjectPicker();
+      if (currentUser.role === 'admin') renderAdminProjects();
+    }
+  } catch(e) { console.error('loadProjects:', e); }
+}
+
+function renderProjectPicker() {
+  const wrap = document.getElementById('projectPickerList');
+  if (!wrap) return;
+  if (!projects.length) {
+    wrap.innerHTML = '<div class="empty-state"><span class="empty-icon">📁</span><p>No projects available. Ask admin to create one.</p></div>';
+    return;
+  }
+  wrap.innerHTML = '<div class="cards-grid">' + projects.map(p => `
+    <div class="project-card ${currentProject && currentProject.id === p.id ? 'selected' : ''}" onclick="selectProject('${p.id}')">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        ${p.logo ? `<img src="${p.logo}" style="width:44px;height:44px;object-fit:contain;border-radius:8px;border:1px solid var(--border)">` : '<div style="width:44px;height:44px;background:var(--primary);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px">🏗</div>'}
+        <div>
+          <div style="font-size:15px;font-weight:700;color:var(--primary)">${p.name}</div>
+          <div style="font-size:11px;color:var(--text-muted);font-family:'Space Grotesk',sans-serif">${p.prefix}-DR-XXXX</div>
+        </div>
+      </div>
+      ${p.mainContractor ? `<div style="font-size:12px;color:var(--text-muted)">🏢 ${p.mainContractor}</div>` : ''}
+      <div style="margin-top:10px;font-size:12px;font-weight:600;color:var(--primary)">Select →</div>
+    </div>`).join('') + '</div>';
+}
+
+function selectProject(id) {
+  currentProject = projects.find(p => p.id === id) || null;
+  if (!currentProject) return;
+  renderProjectPicker();
+  const banner = document.getElementById('selectedProjectBanner');
+  banner.style.display = 'flex';
+  banner.innerHTML = `
+    ${currentProject.logo ? `<img src="${currentProject.logo}" style="width:44px;height:44px;object-fit:contain;border-radius:6px">` : '<span style="font-size:1.8rem">🏗</span>'}
+    <div>
+      <strong style="color:var(--success)">${currentProject.name}</strong>
+      <div style="font-size:12px;color:var(--text-muted)">Ref format: ${currentProject.prefix}-DR-XXXX · ${currentProject.mainContractor || ''}</div>
+    </div>`;
+  document.getElementById('reportFormCard').style.display = 'block';
+  document.getElementById('fProjName').value  = currentProject.name;
+  document.getElementById('fMainCon').value   = currentProject.mainContractor || '';
+  document.getElementById('fRefNo').value     = genRefNo();
+}
+
+function renderAdminProjects() {
+  const wrap = document.getElementById('projListWrap');
+  if (!wrap) return;
+  if (!projects.length) { wrap.innerHTML = '<div class="empty-state"><span class="empty-icon">📁</span><p>No projects yet.</p></div>'; return; }
+  wrap.innerHTML = projects.map(p => `
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;align-items:center;gap:12px">
+        ${p.logo ? `<img src="${p.logo}" style="width:44px;height:44px;object-fit:contain;border-radius:8px;border:1px solid var(--border)">` : '<span style="font-size:1.5rem">📁</span>'}
+        <div>
+          <strong style="color:var(--primary)">${p.name}</strong>
+          <div style="font-size:12px;color:var(--text-muted)">Prefix: ${p.prefix} · Contractor: ${p.mainContractor || 'N/A'}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn-sm btn-edit" onclick="editProject('${p.id}','${p.name.replace(/'/g,"\\'")}','${p.prefix}','${(p.mainContractor||'').replace(/'/g,"\\'")}')">Edit</button>
+        <button class="btn-sm btn-del" onclick="deleteProject('${p.id}')">Delete</button>
+      </div>
+    </div>`).join('');
+}
+
+async function createProject() {
+  const name           = document.getElementById('newProjName').value.trim();
+  const prefix         = document.getElementById('newProjPrefix').value.trim();
+  const startNumber    = parseInt(document.getElementById('newProjStart').value) || 1;
+  const mainContractor = document.getElementById('newProjContractor').value.trim();
+  if (!name || !prefix) return toast('Project name and prefix are required.', true);
+  showLoading('Creating project...');
+  try {
+    const res = await api({ action: 'createProject', name, prefix, startNumber, mainContractor, logo: pendingLogo });
+    hideLoading();
+    if (res.success) {
+      toast('Project created!');
+      document.getElementById('newProjName').value = '';
+      document.getElementById('newProjContractor').value = '';
+      pendingLogo = null;
+      document.getElementById('logoPreview').style.display = 'none';
+      await loadProjects();
+    } else toast(res.message || 'Failed.', true);
+  } catch(e) { hideLoading(); toast('Error: ' + e.message, true); }
+}
+
+async function editProject(id, name, prefix, mainContractor) {
+  const n = prompt('Project name:', name); if (!n) return;
+  const p = prompt('Prefix:', prefix); if (!p) return;
+  const c = prompt('Main contractor:', mainContractor);
+  showLoading('Updating...');
+  try {
+    const res = await api({ action: 'updateProject', projectId: id, name: n, prefix: p, mainContractor: c || '' });
+    hideLoading();
+    if (res.success) { toast('Updated!'); await loadProjects(); }
+    else toast('Failed.', true);
+  } catch(e) { hideLoading(); toast('Error: ' + e.message, true); }
+}
+
+async function deleteProject(id) {
+  if (!confirm('Delete this project and all its reports?')) return;
+  showLoading('Deleting...');
+  try {
+    const res = await api({ action: 'deleteProject', projectId: id });
+    hideLoading();
+    if (res.success) { toast('Deleted!'); await loadProjects(); await loadReports(); }
+    else toast('Failed.', true);
+  } catch(e) { hideLoading(); toast('Error: ' + e.message, true); }
+}
+
+// ══════════════════════════════════════════
+// REPORTS
+// ══════════════════════════════════════════
+async function loadReports() {
+  try {
+    let res;
+    if (currentUser.role === 'admin') {
+      res = await api({ action: 'getReports' });
+    } else {
+      res = await api({ action: 'getMyReports', email: currentUser.email });
+    }
+    if (res.success) {
+      allReports = res.reports || [];
+      renderMyReports();
+      if (currentUser.role === 'admin') renderAllReports();
+      buildFilters();
+    }
+  } catch(e) { console.error('loadReports:', e); }
+}
+
+function buildFilters() {
+  const projNames = [...new Set(allReports.map(r => r.projName).filter(Boolean))];
+  const makeChips = (containerId, current, setter) => {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    if (!projNames.length) { el.innerHTML = ''; return; }
+    el.innerHTML = [
+      `<button class="filter-chip ${current==='all'?'active':''}" onclick="${setter}('all',this)">All</button>`,
+      ...projNames.map(n => `<button class="filter-chip ${current===n?'active':''}" onclick="${setter}(this.dataset.v,this)" data-v="${n.replace(/"/g,'&quot;')}">${n}</button>`)
+    ].join('');
+  };
+  makeChips('myReportsFilter',   myProjectFilter,  'setMyFilter');
+  makeChips('allReportsFilter',  allProjectFilter, 'setAllFilter');
+}
+
+function setMyFilter(val, el) {
+  myProjectFilter = val;
+  document.querySelectorAll('#myReportsFilter .filter-chip').forEach(c => c.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderMyReports();
+}
+function setAllFilter(val, el) {
+  allProjectFilter = val;
+  document.querySelectorAll('#allReportsFilter .filter-chip').forEach(c => c.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderAllReports();
+}
+
+function renderMyReports() {
+  const wrap = document.getElementById('myReportsTable');
+  if (!wrap) return;
+  let reports = allReports.filter(r => r.createdBy === currentUser.email);
+  if (myProjectFilter !== 'all') reports = reports.filter(r => r.projName === myProjectFilter);
+  if (!reports.length) { wrap.innerHTML = '<div class="empty-state"><span class="empty-icon">📋</span><p>No reports yet.</p></div>'; return; }
+  wrap.innerHTML = `<table>
+    <thead><tr><th>Ref No</th><th>Project</th><th>Location</th><th>Date</th><th>Photos</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>${reports.map(r => `<tr>
+      <td><strong style="font-family:'Space Grotesk',sans-serif;font-size:12px">${r.refNo}</strong></td>
+      <td>${r.projName}</td>
+      <td>${r.location}</td>
+      <td>${r.damageDate}</td>
+      <td><span style="font-size:12px">${(r.photos||[]).length > 0 ? '📷 ' + r.photos.length : '—'}</span></td>
+      <td><span class="badge badge-${r.status==='approved'?'approved':'pending'}">${r.status||'pending'}</span></td>
+      <td style="white-space:nowrap">
+        <button class="btn-sm btn-view" onclick="openReport('${r.id}')">View</button>
+        <button class="btn-sm btn-pdf" onclick="quickPDF('${r.id}')">PDF</button>
+        <button class="btn-sm btn-word" onclick="quickWord('${r.id}')">Word</button>
+      </td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+function renderAllReports() {
+  const wrap = document.getElementById('allReportsTable');
+  if (!wrap) return;
+  let reports = [...allReports];
+  if (allProjectFilter !== 'all') reports = reports.filter(r => r.projName === allProjectFilter);
+  if (!reports.length) { wrap.innerHTML = '<div class="empty-state"><span class="empty-icon">📊</span><p>No reports yet.</p></div>'; return; }
+  wrap.innerHTML = `<table>
+    <thead><tr><th>Ref No</th><th>Project</th><th>Engineer</th><th>Location</th><th>Date</th><th>Photos</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>${reports.map(r => {
+      const approveBtn = r.status !== 'approved'
+        ? `<button class="btn-sm btn-approve" onclick="approveReport('${r.id}')">Approve</button>` : '';
+      return `<tr>
+        <td><strong style="font-family:'Space Grotesk',sans-serif;font-size:12px">${r.refNo}</strong></td>
+        <td>${r.projName}</td>
+        <td>${r.createdByName||r.createdBy}</td>
+        <td>${r.location}</td>
+        <td>${r.damageDate}</td>
+        <td><span style="font-size:12px">${(r.photos||[]).length > 0 ? '📷 ' + r.photos.length : '—'}</span></td>
+        <td><span class="badge badge-${r.status==='approved'?'approved':'pending'}">${r.status||'pending'}</span></td>
+        <td style="white-space:nowrap">
+          <button class="btn-sm btn-view" onclick="openReport('${r.id}')">View</button>
+          <button class="btn-sm btn-pdf" onclick="quickPDF('${r.id}')">PDF</button>
+          <button class="btn-sm btn-word" onclick="quickWord('${r.id}')">Word</button>
+          ${approveBtn}
+          <button class="btn-sm btn-del" onclick="deleteReport('${r.id}')">Del</button>
+        </td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+}
+
+async function approveReport(id) {
+  showLoading('Approving...');
+  try {
+    const res = await api({ action: 'updateReport', reportId: id, status: 'approved' });
+    hideLoading();
+    if (res.success) { toast('Report approved!'); await loadReports(); }
+    else toast('Failed.', true);
+  } catch(e) { hideLoading(); toast('Error: ' + e.message, true); }
+}
+
+async function deleteReport(id) {
+  if (!confirm('Delete this report permanently?')) return;
+  showLoading('Deleting...');
+  try {
+    const res = await api({ action: 'deleteReport', reportId: id });
+    hideLoading();
+    if (res.success) { toast('Deleted!'); await loadReports(); }
+    else toast('Failed.', true);
+  } catch(e) { hideLoading(); toast('Error: ' + e.message, true); }
+}
+
+// ══════════════════════════════════════════
+// SUBMIT REPORT — photos sent as base64 in POST body
+// No URL params, no chunking, no CORS issues
+// ══════════════════════════════════════════
+async function submitReport() {
+  if (!currentProject) return toast('Select a project first.', true);
+  const location = document.getElementById('fLocation').value.trim();
+  const date     = document.getElementById('fDate').value;
+  const desc     = document.getElementById('fDesc').value.trim();
+  if (!location || !date || !desc) return toast('Location, date and description are required.', true);
+
+  const materials = [];
+  document.querySelectorAll('#matList .mat-row').forEach(row => {
+    const name = row.querySelector('.m-name').value.trim();
+    if (name) materials.push({
+      name, qty: row.querySelector('.m-qty').value,
+      unit: row.querySelector('.m-unit').value, cost: row.querySelector('.m-cost').value
+    });
+  });
+  if (!materials.length) return toast('Add at least one material.', true);
+
+  // Build photos array — each has fileData (raw base64), mimeType, fileName
+  // Sent in POST body as JSON — no URL size limit, works perfectly
+  const photos = pendingPhotos.map(p => ({
+    fileData: p.fileData,
+    mimeType: p.mimeType,
+    fileName: p.filename
+  }));
+
+  const report = {
+    refNo:         document.getElementById('fRefNo').value,
+    projName:      currentProject.name,
+    location,
+    damageDate:    date,
+    damageTime:    document.getElementById('fTime').value,
+    description:   desc,
+    subcon:        document.getElementById('fSubcon').value.trim(),
+    mainCon:       currentProject.mainContractor || '',
+    notes:         document.getElementById('fNotes').value.trim(),
+    materials,
+    photos,
+    createdBy:     currentUser.email,
+    createdByName: currentUser.fullName,
+    projectId:     currentProject.id,
+    status:        'pending'
+  };
+
+  const photoCount = photos.length;
+  showLoading(photoCount > 0 ? 'Uploading ' + photoCount + ' photo(s) to Drive...' : 'Submitting report...');
+  try {
+    const res = await api({ action: 'submitReport', report });
+    hideLoading();
+    if (res.success) {
+      toast('Report ' + report.refNo + ' submitted!' + (res.photoCount > 0 ? ' ' + res.photoCount + ' photo(s) on Drive.' : ''));
+      resetForm();
+      await loadReports();
+    } else toast(res.message || 'Submission failed.', true);
+  } catch(e) { hideLoading(); toast('Error: ' + e.message, true); }
+}
+
+function resetForm() {
+  document.getElementById('fLocation').value = '';
+  document.getElementById('fDate').value = '';
+  document.getElementById('fTime').value = '';
+  document.getElementById('fSubcon').value = '';
+  document.getElementById('fDesc').value = '';
+  document.getElementById('fNotes').value = '';
+  pendingPhotos = [];
+  document.getElementById('photoPreview').innerHTML = '';
+  document.getElementById('photoCount').textContent = '';
+  document.getElementById('fRefNo').value = genRefNo();
+  document.getElementById('matList').innerHTML = `
+    <div class="mat-row">
+      <input type="text" placeholder="Material name" class="m-name">
+      <input type="text" placeholder="Qty" class="m-qty">
+      <input type="text" placeholder="Unit" class="m-unit">
+      <input type="text" placeholder="Cost (AED)" class="m-cost">
+      <button type="button" onclick="removeMat(this)" style="background:var(--danger-bg);color:var(--danger);border:none;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px">✕</button>
+    </div>`;
+}
+
+// ══════════════════════════════════════════
+// MATERIALS
+// ══════════════════════════════════════════
+function addMat() {
+  const div = document.createElement('div');
+  div.className = 'mat-row';
+  div.innerHTML = `
+    <input type="text" placeholder="Material name" class="m-name">
+    <input type="text" placeholder="Qty" class="m-qty">
+    <input type="text" placeholder="Unit" class="m-unit">
+    <input type="text" placeholder="Cost (AED)" class="m-cost">
+    <button type="button" onclick="removeMat(this)" style="background:var(--danger-bg);color:var(--danger);border:none;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px">✕</button>`;
+  document.getElementById('matList').appendChild(div);
+}
+function removeMat(btn) {
+  const rows = document.querySelectorAll('#matList .mat-row');
+  if (rows.length > 1) btn.parentElement.remove();
+  else btn.parentElement.querySelectorAll('input').forEach(i => i.value = '');
+}
+
+// ══════════════════════════════════════════
+// PHOTO UPLOAD — compress then store as base64
+// Sent inside POST body with the report submission
+// ══════════════════════════════════════════
+function compressPhoto(file) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        const MAX = 1024;
+        if (width > MAX) { height = Math.round(height * MAX / width); width = MAX; }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        // Get as JPEG data URL then strip the header to get raw base64
+        const dataUrl  = canvas.toDataURL('image/jpeg', 0.82);
+        const fileData = dataUrl.split(',')[1]; // raw base64 only
+        resolve({ fileData, mimeType: 'image/jpeg', filename: file.name, dataUrl });
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handlePhotos(input) {
+  const files = Array.from(input.files);
+  if (pendingPhotos.length + files.length > 5) { toast('Max 5 photos.', true); input.value = ''; return; }
+  showLoading('Compressing photos...');
+  for (const file of files) {
+    if (file.size > 10 * 1024 * 1024) { toast(file.name + ' is over 10MB, skipped.', true); continue; }
+    const p = await compressPhoto(file);
+    pendingPhotos.push(p);
+  }
+  hideLoading();
+  input.value = '';
+  renderPhotoPreview();
+}
+
+function renderPhotoPreview() {
+  const wrap = document.getElementById('photoPreview');
+  wrap.innerHTML = pendingPhotos.map((p, i) => `
+    <div class="photo-thumb">
+      <img src="${p.dataUrl}" title="${p.filename}">
+      <button class="rm-photo" onclick="removePhoto(${i})">✕</button>
+    </div>`).join('');
+  document.getElementById('photoCount').textContent =
+    pendingPhotos.length > 0 ? pendingPhotos.length + '/5 photo(s) ready' : '';
+}
+
+function removePhoto(idx) { pendingPhotos.splice(idx, 1); renderPhotoPreview(); }
+
+// ══════════════════════════════════════════
+// LOGO UPLOAD
+// ══════════════════════════════════════════
+async function handleLogo(input) {
+  const file = input.files[0];
+  if (!file) return;
+  showLoading('Processing logo...');
+  const p = await new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        const MAX = 120;
+        if (width > MAX) { height = Math.round(height * MAX / width); width = MAX; }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl  = canvas.toDataURL('image/jpeg', 0.85);
+        const fileData = dataUrl.split(',')[1];
+        resolve({ fileData, mimeType: 'image/jpeg', fileName: file.name, dataUrl });
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+  pendingLogo = { fileData: p.fileData, mimeType: p.mimeType, fileName: p.fileName };
+  const preview = document.getElementById('logoPreview');
+  preview.src = p.dataUrl; preview.style.display = 'block';
+  hideLoading();
+}
+
+// ══════════════════════════════════════════
+// USERS
+// ══════════════════════════════════════════
+async function loadUsers() {
+  try {
+    const res = await api({ action: 'listUsers' });
+    if (res.success) {
+      const wrap = document.getElementById('usersTableWrap');
+      if (!res.users.length) { wrap.innerHTML = '<div class="empty-state"><span class="empty-icon">👥</span><p>No users yet.</p></div>'; return; }
+      wrap.innerHTML = `<table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Registered</th></tr></thead>
+        <tbody>${res.users.map(u => `<tr>
+          <td>${u.name}</td>
+          <td style="font-size:12px">${u.email}</td>
+          <td><span class="badge badge-${u.role}">${u.role}</span></td>
+          <td style="font-size:12px">${u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}</td>
+        </tr>`).join('')}</tbody></table>`;
+    }
+  } catch(e) { console.error('loadUsers:', e); }
+}
+
+// ══════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════
+function switchEngTab(tab) {
+  ['submit','mine'].forEach(t => {
+    document.getElementById('engTab_' + t).classList.toggle('active', t === tab);
+    document.getElementById('engPane_' + t).style.display = t === tab ? 'block' : 'none';
+  });
+}
+
+function switchAdmTab(tab) {
+  ['projects','reports','users'].forEach(t => {
+    document.getElementById('admTab_' + t).classList.toggle('active', t === tab);
+    document.getElementById('admPane_' + t).style.display = t === tab ? 'block' : 'none';
+  });
+  if (tab === 'reports') loadReports();
+  if (tab === 'users') loadUsers();
+}
+
+// ══════════════════════════════════════════
+// REPORT VIEW & EXPORT
+// ══════════════════════════════════════════
+function openReport(id) {
+  const r = allReports.find(r => r.id === id);
+  if (!r) return;
+  viewReport = r;
+  const project = projects.find(p => p.name === r.projName) || null;
+  document.getElementById('reportModalBody').innerHTML = buildReportHTML(r, project);
+  openModal('reportModal');
+}
+
+function exportPDF() {
+  if (!viewReport) return;
+  const project = projects.find(p => p.name === viewReport.projName) || null;
+  const el = document.createElement('div');
+  el.innerHTML = buildReportHTML(viewReport, project);
+  html2pdf().set({
+    filename: 'DamageReport_' + viewReport.refNo + '.pdf',
+    margin: [10,10,10,10],
+    image: { type: 'jpeg', quality: 0.92 },
+    html2canvas: { scale: 2, useCORS: true, allowTaint: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  }).from(el).save();
+  toast('PDF exported!');
+}
+
+function exportWord() {
+  if (!viewReport) return;
+  const project = projects.find(p => p.name === viewReport.projName) || null;
+  doWordExport(viewReport, project);
+}
+
+function quickPDF(id) {
+  const r = allReports.find(r => r.id === id); if (!r) return;
+  const project = projects.find(p => p.name === r.projName) || null;
+  const el = document.createElement('div');
+  el.innerHTML = buildReportHTML(r, project);
+  html2pdf().set({
+    filename: 'DamageReport_' + r.refNo + '.pdf',
+    margin: [10,10,10,10],
+    image: { type: 'jpeg', quality: 0.92 },
+    html2canvas: { scale: 2, useCORS: true, allowTaint: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  }).from(el).save();
+}
+
+function quickWord(id) {
+  const r = allReports.find(r => r.id === id); if (!r) return;
+  const project = projects.find(p => p.name === r.projName) || null;
+  doWordExport(r, project);
+}
+
+function doWordExport(r, project) {
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <style>body{font-family:'Times New Roman',serif;padding:40px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #000;padding:6px}img{max-width:100%}</style>
+    </head><body>${buildReportHTML(r, project)}</body></html>`;
+  const blob = new Blob([html], { type: 'application/msword' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'DamageReport_' + r.refNo + '.doc';
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('Word downloaded!');
+}
+
+function buildReportHTML(r, project) {
+  const mats = r.materials || [];
+  const total = mats.reduce((s, m) => s + (parseFloat(m.qty)||0) * (parseFloat(m.cost)||0), 0);
+  const dateStr = fmtDate(r.damageDate);
+  const logoHtml = (project && project.logo)
+    ? `<img src="${project.logo}" style="max-height:80px;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto" crossorigin="anonymous">`
+    : '';
+  const matRows = mats.map(m => {
+    const lt = ((parseFloat(m.qty)||0) * (parseFloat(m.cost)||0)).toFixed(2);
+    return `<tr>
+      <td style="border:1px solid #000;padding:6px">${m.name}</td>
+      <td style="border:1px solid #000;padding:6px;text-align:center">${m.qty}</td>
+      <td style="border:1px solid #000;padding:6px;text-align:center">${m.unit}</td>
+      <td style="border:1px solid #000;padding:6px;text-align:right">${m.cost}</td>
+      <td style="border:1px solid #000;padding:6px;text-align:right">${lt}</td>
+    </tr>`;
+  }).join('');
+  const photos = r.photos || [];
+  const photosHtml = photos.length > 0
+    ? `<div style="margin-top:20px">
+        <p style="font-weight:bold;font-size:12pt;margin-bottom:10px">SITE PHOTOS (${photos.length})</p>
+        <div style="display:flex;flex-wrap:wrap;gap:12px">
+          ${photos.map((p, i) => {
+            const src = typeof p === 'string' ? p : (p.url || '');
+            return src ? `<div style="text-align:center">
+              <img src="${src}" style="max-width:200px;max-height:150px;border:1px solid #ccc;border-radius:4px;display:block" crossorigin="anonymous">
+              <div style="font-size:9pt;color:#666;margin-top:4px">Photo ${i+1}${p.filename ? ' — ' + p.filename : ''}</div>
+            </div>` : '';
+          }).join('')}
+        </div>
+      </div>`
+    : '<p style="color:#999;font-size:10pt;margin-top:10px"><em>No photos attached.</em></p>';
+
+  return `<div style="font-family:'Times New Roman',serif;padding:20px;background:#fff;color:#000">
+    <div style="text-align:center;margin-bottom:20px">${logoHtml}<h1 style="font-size:16pt;margin:0">SITE DAMAGE REPORT</h1></div>
+    <table border="1" cellpadding="6" style="width:100%;border-collapse:collapse;margin-bottom:12px">
+      <tr><td style="border:1px solid #000;padding:6px;width:22%"><strong>Project Name</strong></td><td colspan="3" style="border:1px solid #000;padding:6px">${r.projName}</td><td style="border:1px solid #000;padding:6px;width:16%"><strong>REF No</strong></td><td style="border:1px solid #000;padding:6px"><strong>${r.refNo}</strong></td></tr>
+      <tr><td style="border:1px solid #000;padding:6px"><strong>Sub-Contractor</strong></td><td colspan="3" style="border:1px solid #000;padding:6px">${r.subcon||'N/A'}</td><td style="border:1px solid #000;padding:6px"><strong>Date</strong></td><td style="border:1px solid #000;padding:6px">${dateStr}</td></tr>
+      <tr><td style="border:1px solid #000;padding:6px"><strong>To (Main Contractor)</strong></td><td colspan="5" style="border:1px solid #000;padding:6px">${r.mainCon||'N/A'}</td></tr>
+    </table>
+    <table border="1" cellpadding="6" style="width:100%;border-collapse:collapse;margin-bottom:12px">
+      <tr><td style="border:1px solid #000;padding:6px;width:20%"><strong>DAMAGED DATE</strong></td><td style="border:1px solid #000;padding:6px">${dateStr}</td><td style="border:1px solid #000;padding:6px;width:20%"><strong>LOCATION</strong></td><td style="border:1px solid #000;padding:6px">${r.location}</td></tr>
+      <tr><td style="border:1px solid #000;padding:6px"><strong>TIME</strong></td><td style="border:1px solid #000;padding:6px">${r.damageTime||'N/A'}</td><td style="border:1px solid #000;padding:6px"><strong>Reported By</strong></td><td style="border:1px solid #000;padding:6px">${r.createdByName||r.createdBy}</td></tr>
+    </table>
+    <div style="margin-bottom:14px"><strong>DETAILS:</strong><p style="margin-top:6px;margin-left:10px">${r.description}</p></div>
+    <p style="margin-bottom:8px"><strong>DAMAGED MATERIALS SUMMARY</strong></p>
+    <table border="1" cellpadding="6" style="width:100%;border-collapse:collapse;margin-bottom:14px">
+      <thead><tr style="background:#f0f0f0"><th style="border:1px solid #000;padding:6px">Material</th><th style="border:1px solid #000;padding:6px;text-align:center">Qty</th><th style="border:1px solid #000;padding:6px;text-align:center">Unit</th><th style="border:1px solid #000;padding:6px;text-align:right">Unit Cost (AED)</th><th style="border:1px solid #000;padding:6px;text-align:right">Total (AED)</th></tr></thead>
+      <tbody>${matRows}</tbody>
+      <tfoot><tr style="background:#f0f0f0"><td colspan="4" style="border:1px solid #000;padding:6px;text-align:right"><strong>Grand Total:</strong></td><td style="border:1px solid #000;padding:6px;text-align:right"><strong>${total.toFixed(2)} AED</strong></td></tr></tfoot>
+    </table>
+    ${r.notes ? `<p style="margin-bottom:12px"><strong>Notes:</strong> ${r.notes}</p>` : ''}
+    ${photosHtml}
+    <p style="margin-top:14px"><strong>Please consider this matter with high importance.</strong></p>
+    <table border="1" cellpadding="6" style="width:100%;border-collapse:collapse;margin-top:18px"><tr><td style="border:1px solid #000;padding:8px;width:30%"><strong>CONTRACTOR'S COMMENTS</strong></td><td style="border:1px solid #000;padding:8px">&nbsp;</td></tr></table>
+    <table border="1" cellpadding="6" style="width:100%;border-collapse:collapse;margin-top:12px"><tr><td style="border:1px solid #000;padding:6px;width:10%"><strong>For</strong></td><td style="border:1px solid #000;padding:6px;width:35%">&nbsp;</td><td style="border:1px solid #000;padding:6px;width:12%"><strong>Signed</strong></td><td style="border:1px solid #000;padding:6px;width:28%">&nbsp;</td><td style="border:1px solid #000;padding:6px"><strong>Date</strong></td><td style="border:1px solid #000;padding:6px">&nbsp;</td></tr></table>
+    <div style="margin-top:18px;text-align:center;font-size:9pt;border-top:1px solid #ccc;padding-top:10px;color:#666">Computer generated document — Ref: ${r.refNo}</div>
+  </div>`;
+}
+
+// Close modal on backdrop click
+document.getElementById('reportModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('reportModal')) closeModal('reportModal');
+});
+</script>
+</body>
+</html>
