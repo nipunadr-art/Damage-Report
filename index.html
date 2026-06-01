@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Damage Report System - Complete</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+        .loading { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 9999; color: white; flex-direction: column; gap: 15px; }
+        .loading.active { display: flex; }
+        .spinner { animation: spin 1s linear infinite; font-size: 2rem; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .auth-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        .auth-box { background: white; border-radius: 32px; padding: 48px; width: 100%; max-width: 480px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
+        .auth-box h2 { margin-bottom: 32px; color: #1e293b; text-align: center; }
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #334155; font-size: 0.85rem; }
+        .input-group input, .input-group select, .input-group textarea { width: 100%; padding: 12px 16px; border: 2px solid #e2e8f0; border-radius: 16px; font-size: 1rem; }
+        .btn-primary { width: 100%; padding: 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 16px; font-weight: 600; cursor: pointer; }
+        .toggle-auth { text-align: center; margin-top: 20px; color: #667eea; cursor: pointer; }
+        .app-container { max-width: 1400px; margin: 0 auto; padding: 20px; display: none; }
+        .header { background: white; border-radius: 24px; padding: 20px 28px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .logo h1 { font-size: 1.5rem; font-weight: 700; background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .user-info { display: flex; align-items: center; gap: 15px; }
+        .badge { background: #f1f5f9; padding: 8px 16px; border-radius: 40px; font-weight: 500; }
+        .logout-btn { background: #ef4444; padding: 8px 20px; border-radius: 40px; color: white; border: none; cursor: pointer; }
+        .nav-tabs { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; }
+        .nav-tab { padding: 10px 24px; background: transparent; border: none; font-weight: 600; cursor: pointer; color: #64748b; border-radius: 12px; }
+        .nav-tab.active { background: #1e293b; color: white; }
+        .card { background: white; border-radius: 24px; padding: 28px; margin-bottom: 24px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .photo-upload { border: 2px dashed #cbd5e1; border-radius: 16px; padding: 30px; text-align: center; cursor: pointer; background: #f8fafc; transition: all 0.2s; }
+        .photo-upload:hover { border-color: #667eea; background: #f1f5f9; }
+        .photo-preview { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
+        .preview-img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 2px solid #e2e8f0; }
+        .material-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
+        .material-row input { flex: 1; padding: 10px; border: 1px solid #e2e8f0; border-radius: 12px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f8fafc; font-weight: 600; }
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: inline-block; }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-approved { background: #d1fae5; color: #065f46; }
+        .project-card { background: #f8fafc; border-radius: 16px; padding: 16px; margin-bottom: 12px; cursor: pointer; border: 2px solid transparent; display: flex; align-items: center; gap: 15px; }
+        .project-card:hover { border-color: #667eea; }
+        .project-card.selected { border-color: #10b981; background: #f0fdf4; }
+        .project-logo { width: 50px; height: 50px; object-fit: contain; }
+        .admin-project-card { background: #f8fafc; border-radius: 16px; padding: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .export-buttons { display: flex; gap: 8px; }
+        .export-btn { padding: 6px 12px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; font-weight: 500; }
+        .export-pdf { background: #ef4444; color: white; }
+        .export-word { background: #3b82f6; color: white; }
+        .edit-btn { background: #f59e0b; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+        .delete-btn { background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+        .delete-project-btn { background: #dc2626; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+        .approve-btn { background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+        .logo-upload-area { border: 2px dashed #cbd5e1; border-radius: 16px; padding: 20px; text-align: center; cursor: pointer; background: #f8fafc; }
+        .logo-preview { max-width: 100px; margin-top: 10px; }
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 10000; }
+        .modal-content { background: white; border-radius: 24px; padding: 28px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        .toast { position: fixed; bottom: 20px; right: 20px; background: #10b981; color: white; padding: 12px 24px; border-radius: 12px; z-index: 1000; animation: slideIn 0.3s ease; }
+        .toast.error { background: #ef4444; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @media (max-width: 768px) { .auth-box { padding: 32px 24px; } .card { padding: 20px; } }
+    </style>
+</head>
+<body>
+
+<div class="loading" id="loading"><i class="fas fa-spinner spinner"></i><div>Processing...</div></div>
+
+<div id="authPage" class="auth-container">
+    <div class="auth-box">
+        <h2><i class="fas fa-clipboard-list"></i> Damage Report System</h2>
+        <div id="loginForm">
+            <div class="input-group"><label>Email</label><input type="email" id="loginEmail" placeholder="your@email.com"></div>
+            <div class="input-group"><label>Password</label><input type="password" id="loginPassword" placeholder="••••••"></div>
+            <button class="btn-primary" id="loginBtn"><i class="fas fa-sign-in-alt"></i> Login</button>
+            <div class="toggle-auth" id="showRegisterBtn">Don't have an account? Register as Engineer</div>
+        </div>
+        <div id="registerForm" style="display:none;">
+            <div class="input-group"><label>Full Name</label><input type="text" id="regName" placeholder="Ahmed Mohamed"></div>
+            <div class="input-group"><label>Email</label><input type="email" id="regEmail" placeholder="ahmed@site.com"></div>
+            <div class="input-group"><label>Password</label><input type="password" id="regPassword" placeholder="Minimum 6 chars"></div>
+            <button class="btn-primary" id="registerBtn"><i class="fas fa-user-plus"></i> Register as Engineer</button>
+            <div class="toggle-auth" id="showLoginBtn">Already have an account? Login</div>
+        </div>
+    </div>
+</div>
+
+<div id="mainApp" class="app-container">
+    <div class="header">
+        <div class="logo"><h1><i class="fas fa-clipboard-list"></i> Damage Report System</h1><p>Project-Based Damage Report Management</p></div>
+        <div class="user-info"><span class="badge" id="userNameDisplay"></span><button class="logout-btn" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</button></div>
+    </div>
+
+    <!-- Engineer View -->
+    <div id="engineerView">
+        <div class="nav-tabs" id="engineerTabs">
+            <button class="nav-tab active" data-tab="submit">📝 Submit Report</button>
+            <button class="nav-tab" data-tab="myreports">📋 My Reports</button>
+        </div>
+
+        <div id="submitTab">
+            <div class="card">
+                <h3><i class="fas fa-folder-open"></i> Select Project</h3>
+                <div id="projectList"></div>
+                <div id="selectedProjectInfo" style="background:#f1f5f9;padding:12px;border-radius:12px;margin-top:20px;display:none;"></div>
+            </div>
+
+            <div class="card" id="reportFormCard" style="display:none;">
+                <h3><i class="fas fa-plus-circle"></i> New Damage Report</h3>
+                <form id="damageForm">
+                    <div class="form-grid">
+                        <div><label>Reference Number</label><input type="text" id="refNo" readonly style="background:#f1f5f9;"></div>
+                        <div><label>Project</label><input type="text" id="projName" readonly style="background:#f1f5f9;"></div>
+                        <div><label>Location *</label><input type="text" id="location" required></div>
+                        <div><label>Damage Date *</label><input type="date" id="damageDate" required></div>
+                        <div><label>Time</label><input type="text" id="damageTime" placeholder="After 06:00 pm"></div>
+                        <div><label>Sub-Contractor</label><input type="text" id="subcon" value="IMA ENGINEERING LLC"></div>
+                        <div><label>Main Contractor</label><input type="text" id="mainCon" readonly style="background:#f1f5f9;"></div>
+                    </div>
+                    <div><label>Description *</label><textarea id="description" rows="3" required style="width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:12px"></textarea></div>
+                    
+                    <h4><i class="fas fa-cubes"></i> Damaged Materials</h4>
+                    <div id="materialsList"><div class="material-row"><input type="text" placeholder="Material" class="mat-name"><input type="text" placeholder="Qty" class="mat-qty"><input type="text" placeholder="Unit" class="mat-unit"><input type="text" placeholder="Cost (AED)" class="mat-cost"><button type="button" class="removeMatBtn" style="background:#ef4444;color:white;border:none;padding:8px 15px;border-radius:8px">✕</button></div></div>
+                    <button type="button" id="addMaterialBtn" style="margin:10px 0;background:#64748b;padding:10px 20px;color:white;border:none;border-radius:8px">➕ Add Material</button>
+                    
+                    <div><label>📷 Photos (max 5, saved to Google Drive)</label><div class="photo-upload" id="photoUploadBtn"><i class="fas fa-cloud-upload-alt" style="font-size:2rem"></i><p>Click to upload images</p><small>JPEG, PNG up to 5MB each</small></div><input type="file" id="photoInput" multiple accept="image/*" style="display:none"><div id="photoPreview" class="photo-preview"></div></div>
+                    
+                    <div><label>Notes</label><textarea id="notes" rows="2" style="width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:12px"></textarea></div>
+                    <button type="submit" style="background:#10b981;width:100%;padding:14px;color:white;border:none;border-radius:12px;margin-top:10px">📤 Submit Report</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="myreportsTab" style="display:none;"><div class="card"><h3><i class="fas fa-history"></i> My Reports</h3><div id="myReports"></div></div></div>
+    </div>
+
+    <!-- Admin View -->
+    <div id="adminView" style="display:none;">
+        <div class="nav-tabs" id="adminTabs">
+            <button class="nav-tab active" data-tab="projects">📁 Manage Projects</button>
+            <button class="nav-tab" data-tab="allreports">📊 All Reports</button>
+            <button class="nav-tab" data-tab="users">👥 Users</button>
+        </div>
+
+        <div id="projectsTab">
+            <div class="card">
+                <h3><i class="fas fa-plus-circle"></i> Create New Project</h3>
+                <div class="form-grid">
+                    <div><label>Project Name</label><input type="text" id="newProjectName" placeholder="e.g., AUH01 - Pure Data Centre"></div>
+                    <div><label>Reference Prefix</label><input type="text" id="newProjectPrefix" placeholder="e.g., LOR-IMA-PDC" value="LOR-IMA-PDC"></div>
+                    <div><label>Start Number</label><input type="number" id="newProjectStartNum" value="1" min="1"></div>
+                    <div><label>Main Contractor</label><input type="text" id="newMainContractor" placeholder="Main Contractor Name"></div>
+                </div>
+                <div><label>Company Logo</label><div class="logo-upload-area" id="logoUploadArea">🏢 Click to upload company logo</div><input type="file" id="logoInput" accept="image/*" style="display:none"><img id="logoPreview" class="logo-preview" style="display:none"></div>
+                <button id="createProjectBtn" style="margin-top:20px;background:#10b981;padding:12px 24px;color:white;border:none;border-radius:12px">💾 Create Project</button>
+            </div>
+            <div class="card"><h3><i class="fas fa-list"></i> Existing Projects</h3><div id="projectsList"></div></div>
+        </div>
+
+        <div id="allreportsTab" style="display:none;"><div class="card"><h3><i class="fas fa-chart-line"></i> All Damage Reports</h3><div id="adminReports"></div></div></div>
+        <div id="usersTab" style="display:none;"><div class="card"><h3><i class="fas fa-users"></i> Registered Users</h3><div id="usersList"></div></div></div>
+    </div>
+</div>
+
+<!-- Edit Project Modal -->
+<div id="editProjectModal" class="modal">
+    <div class="modal-content">
+        <h3>Edit Project</h3>
+        <form id="editProjectForm">
+            <div class="input-group"><label>Project Name</label><input type="text" id="editProjectName" required></div>
+            <div class="input-group"><label>Reference Prefix</label><input type="text" id="editProjectPrefix" required></div>
+            <div class="input-group"><label>Main Contractor</label><input type="text" id="editProjectContractor"></div>
+            <div class="input-group"><label>Company Logo</label><div class="logo-upload-area" id="editLogoUploadArea">🖼️ Click to change logo</div><input type="file" id="editLogoInput" accept="image/*" style="display:none"><img id="editLogoPreview" class="logo-preview" style="display:none"></div>
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button type="submit" style="background:#10b981;">Save Changes</button>
+                <button type="button" onclick="closeEditModal()" style="background:#64748b;">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyv9Wc1TkKGoja2SjZfh2qYrvJeBxzzKbJ-2jYZL5tfPEPOuxfqnKeV0obPZUysR-i5KA/exec';
+let currentUser = null;
+let currentPhotos = [];
+let currentProject = null;
+let projects = [];
+let allReports = [];
+let currentEditProjectId = null;
+let pendingLogoData = null;
+let pendingEditLogoData = null;
+let currentReportId = null;
+
+async function callAPI(action, params = {}) {
+    const url = new URL(APPS_SCRIPT_URL);
+    url.searchParams.append('action', action);
+    Object.keys(params).forEach(key => {
+        if (params[key] !== undefined && params[key] !== null) {
+            url.searchParams.append(key, params[key]);
+        }
+    });
+    try {
+        const response = await fetch(url.toString());
+        const text = await response.text();
+        const match = text.match(/callback_\d+\((.*)\)/);
+        if (match) return JSON.parse(match[1]);
+        return JSON.parse(text);
+    } catch (error) {
+        console.error('API Error:', error);
+        return { success: false, message: error.message };
+    }
+}
+
+async function uploadPhotoToDrive(photoBase64, reportId, projectId) {
+    const formData = new FormData();
+    formData.append('action', 'uploadPhoto');
+    formData.append('photo', photoBase64);
+    formData.append('reportId', reportId);
+    formData.append('projectId', projectId);
+    
+    try {
+        const response = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            body: formData
+        });
+        const text = await response.text();
+        return JSON.parse(text);
+    } catch (error) {
+        console.error('Upload error:', error);
+        return { success: false };
+    }
+}
+
+function showToast(msg, isError = false) {
+    const toast = document.createElement('div');
+    toast.className = `toast ${isError ? 'error' : ''}`;
+    toast.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> ${msg}`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+function showLoading(show) { document.getElementById('loading').classList.toggle('active', show); }
+
+function generateRefNo() {
+    if (!currentProject) return 'SELECT-PROJECT-FIRST';
+    const nextNum = (currentProject.lastNumber || 0) + 1;
+    return `${currentProject.prefix}-DR-${String(nextNum).padStart(3, '0')}`;
+}
+
+// Authentication
+async function handleLogin() {
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    if (!email || !password) { showToast('Please enter email and password', true); return; }
+    showLoading(true);
+    const result = await callAPI('login', { email, password });
+    showLoading(false);
+    if (result.success) {
+        currentUser = result.user;
+        document.getElementById('authPage').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+        document.getElementById('userNameDisplay').innerHTML = `👤 ${currentUser.fullName} (${currentUser.role})`;
+        if (currentUser.role === 'admin') {
+            document.getElementById('adminView').style.display = 'block';
+            document.getElementById('engineerView').style.display = 'none';
+            await loadProjects();
+            await loadReports();
+            loadUsers();
+        } else {
+            document.getElementById('adminView').style.display = 'none';
+            document.getElementById('engineerView').style.display = 'block';
+            await loadProjects();
+            await loadReports();
+        }
+        showToast('Welcome ' + currentUser.fullName);
+    } else { showToast(result.message || 'Login failed', true); }
+}
+
+async function handleRegister() {
+    const name = document.getElementById('regName').value;
+    const email = document.getElementById('regEmail').value;
+    const password = document.getElementById('regPassword').value;
+    if (!name || !email || !password) { showToast('Please fill all fields', true); return; }
+    showLoading(true);
+    const result = await callAPI('register', { name, email, password, role: 'engineer' });
+    showLoading(false);
+    if (result.success) { showToast('Registration successful! Please login.', false); showLogin(); document.getElementById('loginEmail').value = email; }
+    else { showToast(result.message || 'Registration failed', true); }
+}
+
+function showRegister() { document.getElementById('loginForm').style.display = 'none'; document.getElementById('registerForm').style.display = 'block'; }
+function showLogin() { document.getElementById('loginForm').style.display = 'block'; document.getElementById('registerForm').style.display = 'none'; }
+function logout() { currentUser = null; document.getElementById('authPage').style.display = 'flex'; document.getElementById('mainApp').style.display = 'none'; showLogin(); }
+
+// Projects
+async function loadProjects() {
+    const result = await callAPI('getProjects', {});
+    if (result.success) { projects = result.projects || []; renderProjectList(); if (currentUser?.role === 'admin') renderAdminProjects(); }
+}
+
+function renderProjectList() {
+    const container = document.getElementById('projectList');
+    if (!container) return;
+    if (projects.length === 0) { container.innerHTML = '<p>No projects available. Contact admin to create projects.</p>'; return; }
+    container.innerHTML = projects.map(p => `<div class="project-card" onclick="selectProject('${p.id}')">${p.logo ? `<img src="${p.logo}" class="project-logo" onerror="this.style.display='none'">` : '<div style="width:50px;text-align:center">📁</div>'}<div><strong>${p.name}</strong><br><small>Prefix: ${p.prefix} | Main Contractor: ${p.mainContractor || 'N/A'}</small></div></div>`).join('');
+}
+
+function selectProject(projectId) {
+    currentProject = projects.find(p => p.id === projectId);
+    if (currentProject) {
+        document.getElementById('selectedProjectInfo').innerHTML = `<div style="display:flex;align-items:center;gap:15px">${currentProject.logo ? `<img src="${currentProject.logo}" style="height:50px">` : ''}<div><strong>${currentProject.name}</strong><br><small>Main Contractor: ${currentProject.mainContractor || 'N/A'} | Format: ${currentProject.prefix}-DR-XXX</small></div></div>`;
+        document.getElementById('selectedProjectInfo').style.display = 'block';
+        document.getElementById('reportFormCard').style.display = 'block';
+        document.getElementById('projName').value = currentProject.name;
+        document.getElementById('mainCon').value = currentProject.mainContractor || '';
+        const nextNum = (currentProject.lastNumber || 0) + 1;
+        document.getElementById('refNo').value = `${currentProject.prefix}-DR-${String(nextNum).padStart(3, '0')}`;
+        document.querySelectorAll('.project-card').forEach(card => card.classList.remove('selected'));
+        event.currentTarget.classList.add('selected');
+    }
+}
+
+async function createProject() {
+    const name = document.getElementById('newProjectName').value;
+    const prefix = document.getElementById('newProjectPrefix').value;
+    const startNum = parseInt(document.getElementById('newProjectStartNum').value);
+    const mainContractor = document.getElementById('newMainContractor').value;
+    
+    if (!name || !prefix) { showToast('Please fill all fields', true); return; }
+    showLoading(true);
+    const result = await callAPI('createProject', { name, prefix, startNumber: startNum, logo: pendingLogoData || '', mainContractor: mainContractor });
+    showLoading(false);
+    if (result.success) {
+        showToast('Project created!');
+        document.getElementById('newProjectName').value = '';
+        document.getElementById('newProjectPrefix').value = 'LOR-IMA-PDC';
+        document.getElementById('newProjectStartNum').value = '1';
+        document.getElementById('newMainContractor').value = '';
+        pendingLogoData = null;
+        document.getElementById('logoPreview').style.display = 'none';
+        document.getElementById('logoPreview').src = '';
+        await loadProjects();
+    } else { showToast(result.message || 'Creation failed', true); }
+}
+
+function renderAdminProjects() {
+    const container = document.getElementById('projectsList');
+    if (!container) return;
+    if (projects.length === 0) { container.innerHTML = '<p>No projects yet. Create one above.</p>'; return; }
+    container.innerHTML = projects.map(p => `<div class="admin-project-card"><div style="display:flex;align-items:center;gap:15px">${p.logo ? `<img src="${p.logo}" style="height:40px">` : '📁'}<div><strong>${p.name}</strong><br><small>Prefix: ${p.prefix} | Contractor: ${p.mainContractor || 'N/A'} | Reports: ${p.reportCount || 0}</small></div></div><div><button class="edit-btn" onclick="openEditProjectModal('${p.id}','${p.name}','${p.prefix}','${p.mainContractor || ''}','${p.logo || ''}')"><i class="fas fa-edit"></i> Edit</button><button class="delete-project-btn" onclick="deleteProject('${p.id}')"><i class="fas fa-trash-alt"></i> Delete Project</button></div></div>`).join('');
+}
+
+function openEditProjectModal(id, name, prefix, contractor, logo) {
+    currentEditProjectId = id;
+    document.getElementById('editProjectName').value = name;
+    document.getElementById('editProjectPrefix').value = prefix;
+    document.getElementById('editProjectContractor').value = contractor;
+    if (logo) {
+        document.getElementById('editLogoPreview').src = logo;
+        document.getElementById('editLogoPreview').style.display = 'block';
+        pendingEditLogoData = logo;
+    } else {
+        document.getElementById('editLogoPreview').style.display = 'none';
+        pendingEditLogoData = null;
+    }
+    document.getElementById('editProjectModal').style.display = 'flex';
+}
+
+function closeEditModal() {
+    document.getElementById('editProjectModal').style.display = 'none';
+    currentEditProjectId = null;
+    pendingEditLogoData = null;
+}
+
+async function saveProjectEdit() {
+    const newName = document.getElementById('editProjectName').value;
+    const newPrefix = document.getElementById('editProjectPrefix').value;
+    const newContractor = document.getElementById('editProjectContractor').value;
+    if (!newName || !newPrefix) { showToast('Project name and prefix required', true); return; }
+    showLoading(true);
+    const result = await callAPI('updateProject', { projectId: currentEditProjectId, name: newName, prefix: newPrefix, mainContractor: newContractor, logo: pendingEditLogoData || '' });
+    showLoading(false);
+    if (result.success) {
+        showToast('Project updated!');
+        closeEditModal();
+        await loadProjects();
+    } else { showToast('Update failed', true); }
+}
+
+async function deleteProject(id) {
+    if (confirm('Delete this project? This will also delete all associated reports.')) {
+        showLoading(true);
+        const result = await callAPI('deleteProject', { projectId: id });
+        showLoading(false);
+        if (result.success) { showToast('Project deleted!'); await loadProjects(); await loadReports(); }
+        else { showToast('Delete failed: ' + result.message, true); }
+    }
+}
+
+// Reports
+async function loadReports() {
+    const result = await callAPI('getReports', {});
+    if (result.success) { allReports = result.reports || []; renderMyReports(); if (currentUser?.role === 'admin') renderAdminReports(); }
+}
+
+function renderMyReports() {
+    const container = document.getElementById('myReports');
+    const myReports = allReports.filter(r => r.createdBy === currentUser?.email);
+    if (myReports.length === 0) { container.innerHTML = '<p>No reports yet.</p>'; return; }
+    container.innerHTML = `<table><thead><tr><th>Ref No</th><th>Project</th><th>Location</th><th>Date</th><th>Status</th><th>Export</th></tr></thead><tbody>${myReports.map(r => `<tr><td><strong>${r.refNo}</strong></td><td>${r.projName}</td><td>${r.location}</td><td>${r.damageDate}</td><td><span class="status-badge ${r.status === 'approved' ? 'status-approved' : 'status-pending'}">${r.status}</span></td><td><div class="export-buttons"><button class="export-btn export-pdf" onclick="generatePDF('${r.id}')">PDF</button><button class="export-btn export-word" onclick="generateWord('${r.id}')">Word</button></div></td></tr>`).join('')}</tbody></table>`;
+}
+
+function renderAdminReports() {
+    const container = document.getElementById('adminReports');
+    if (!container) return;
+    if (allReports.length === 0) { container.innerHTML = '<p>No reports yet.</p>'; return; }
+    container.innerHTML = `<table><thead><tr><th>Ref No</th><th>Project</th><th>Engineer</th><th>Location</th><th>Date</th><th>Status</th><th>Export</th><th>Actions</th></tr></thead><tbody>${allReports.map(r => `<tr><td><strong>${r.refNo}</strong></td><td>${r.projName}</td><td>${r.createdByName}</td><td>${r.location}</td><td>${r.damageDate}</td><td><span class="status-badge ${r.status === 'approved' ? 'status-approved' : 'status-pending'}">${r.status}</span></td><td><div class="export-buttons"><button class="export-btn export-pdf" onclick="generatePDF('${r.id}')">PDF</button><button class="export-btn export-word" onclick="generateWord('${r.id}')">Word</button></div></td><td>${r.status !== 'approved' ? `<button class="approve-btn" onclick="approveReport('${r.id}')">Approve</button>` : ''} <button class="edit-btn" onclick="openEditReportModal('${r.id}')">Edit</button> <button class="delete-btn" onclick="deleteReport('${r.id}')">Delete</button></td></tr>`).join('')}</tbody></table>`;
+}
+
+function openEditReportModal(reportId) {
+    const report = allReports.find(r => r.id === reportId);
+    if (!report) return;
+    const newLocation = prompt('Enter new location:', report.location);
+    const newDescription = prompt('Enter new description:', report.description);
+    if (newLocation && newDescription) {
+        showLoading(true);
+        callAPI('editReport', { data: JSON.stringify({ id: reportId, location: newLocation, description: newDescription, damageDate: report.damageDate, damageTime: report.damageTime, notes: report.notes }) }).then(async result => {
+            showLoading(false);
+            if (result.success) { showToast('Report updated!'); await loadReports(); }
+            else { showToast('Update failed', true); }
+        });
+    }
+}
+
+async function approveReport(reportId) {
+    showLoading(true);
+    const result = await callAPI('updateReport', { reportId, status: 'approved' });
+    showLoading(false);
+    if (result.success) { showToast('Report approved!'); await loadReports(); }
+    else { showToast('Failed', true); }
+}
+
+async function deleteReport(reportId) {
+    if (confirm('Delete this report?')) {
+        showLoading(true);
+        const result = await callAPI('deleteReport', { reportId });
+        showLoading(false);
+        if (result.success) { showToast('Report deleted!'); await loadReports(); }
+        else { showToast('Delete failed', true); }
+    }
+}
+
+async function loadUsers() {
+    const result = await callAPI('listUsers', {});
+    if (result.success && result.users) {
+        const container = document.getElementById('usersList');
+        container.innerHTML = `<table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Registered</th></tr></thead><tbody>${result.users.map(u => `<tr><td>${u.name}</td><td>${u.email}</td><td>${u.role}</td><td>${new Date(u.createdAt).toLocaleDateString()}</td></tr>`).join('')}</tbody></tr>`;
+    }
+}
+
+// Clean PDF Generation - No header/footer
+function generatePDF(reportId) {
+    const report = allReports.find(r => r.id === reportId);
+    const project = projects.find(p => p.name === report?.projName);
+    if (!report) return;
+    
+    const element = document.createElement('div');
+    element.innerHTML = `
+        <div style="padding: 40px; font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
+            <div style="text-align: center; margin-bottom: 30px;">
+                ${project?.logo ? `<img src="${project.logo}" style="max-height: 80px; margin-bottom: 20px;">` : ''}
+                <h1 style="color: #1e293b; margin: 10px 0;">DAMAGE REPORT</h1>
+                <p style="color: #64748b;">Reference: ${report.refNo}</p>
+            </div>
+            
+            <hr style="margin: 20px 0;">
+            
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                <tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8fafc; width: 30%;"><strong>Project Name:</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">${report.projName}</td>
+                </tr>
+                <tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8fafc;"><strong>Location:</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">${report.location}</td>
+                </tr>
+                <tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8fafc;"><strong>Damage Date:</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">${report.damageDate} ${report.damageTime || ''}</td>
+                </tr>
+                <tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8fafc;"><strong>Main Contractor:</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">${project?.mainContractor || report.mainCon || 'N/A'}</td>
+                </tr>
+                <tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8fafc;"><strong>Sub-Contractor:</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">${report.subcon || 'N/A'}</td>
+                </tr>
+                <tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8fafc;"><strong>Submitted By:</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">${report.createdByName}</td>
+                </tr>
+                <tr><td style="padding: 8px; border: 1px solid #ddd; background: #f8fafc;"><strong>Status:</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><span style="background: ${report.status === 'approved' ? '#10b981' : '#f59e0b'}; color: white; padding: 4px 12px; border-radius: 20px;">${report.status.toUpperCase()}</span></td>
+                </tr>
+            </table>
+            
+            <h3 style="margin: 20px 0 10px 0;">Description</h3>
+            <p style="line-height: 1.6; margin-bottom: 20px;">${report.description}</p>
+            
+            <h3 style="margin: 20px 0 10px 0;">Damaged Materials</h3>
+            <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+                <thead>
+                    <tr style="background: #f8fafc;">
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Material</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Quantity</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Unit</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Cost (AED)</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Total (AED)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${report.materials.map(m => `
+                        <tr>
+                            <td style="padding: 8px; border: 1px solid #ddd;">${m.name}</td>
+                            <td style="padding: 8px; border: 1px solid #ddd;">${m.qty}</td>
+                            <td style="padding: 8px; border: 1px solid #ddd;">${m.unit}</td>
+                            <td style="padding: 8px; border: 1px solid #ddd;">${m.cost}</td>
+                            <td style="padding: 8px; border: 1px solid #ddd;">${parseInt(m.qty) * parseInt(m.cost) || 0}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+                <tfoot>
+                    <tr style="background: #f1f5f9;">
+                        <td colspan="4" style="padding: 10px; border: 1px solid #ddd; text-align: right;"><strong>Grand Total:</strong></td>
+                        <td style="padding: 10px; border: 1px solid #ddd;"><strong>${report.materials.reduce((sum, m) => sum + (parseInt(m.qty) * parseInt(m.cost) || 0), 0)} AED</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+            
+            ${report.notes ? `<h3 style="margin: 20px 0 10px 0;">Notes</h3><p style="line-height: 1.6;">${report.notes}</p>` : ''}
+            
+            <hr style="margin: 30px 0 20px 0;">
+            <p style="text-align: center; color: #94a3b8; font-size: 12px;">Generated on ${new Date().toLocaleString()}</p>
+        </div>
+    `;
+    
+    const opt = {
+        margin: [0.5, 0.5, 0.5, 0.5],
+        filename: `Damage_Report_${report.refNo}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+    };
+    
+    html2pdf().set(opt).from(element).save();
+    showToast('PDF generated successfully!');
+}
+
+// Clean Word Generation
+function generateWord(reportId) {
+    const report = allReports.find(r => r.id === reportId);
+    const project = projects.find(p => p.name === report?.projName);
+    if (!report) return;
+    
+    const htmlContent = `<!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Damage Report ${report.refNo}</title>
+        <style>
+            body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .logo { max-height: 80px; margin-bottom: 20px; }
+            h1 { color: #1e293b; margin: 10px 0; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th, td { padding: 8px; border: 1px solid #ddd; text-align: left; }
+            th { background: #f8fafc; }
+            .status-badge { background: #f59e0b; color: white; padding: 4px 12px; border-radius: 20px; display: inline-block; }
+            .status-approved { background: #10b981; }
+            hr { margin: 20px 0; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            ${project?.logo ? `<img src="${project.logo}" class="logo">` : ''}
+            <h1>DAMAGE REPORT</h1>
+            <p>Reference: ${report.refNo}</p>
+        </div>
+        <hr>
+        <table>
+            <tr><th style="width:30%">Project Name:</th><td>${report.projName}</td></tr>
+            <tr><th>Location:</th><td>${report.location}</td></tr>
+            <tr><th>Damage Date:</th><td>${report.damageDate} ${report.damageTime || ''}</td></tr>
+            <tr><th>Main Contractor:</th><td>${project?.mainContractor || report.mainCon || 'N/A'}</td></tr>
+            <tr><th>Sub-Contractor:</th><td>${report.subcon || 'N/A'}</td></tr>
+            <tr><th>Submitted By:</th><td>${report.createdByName}</td></tr>
+            <tr><th>Status:</th><td><span class="status-badge ${report.status === 'approved' ? 'status-approved' : ''}">${report.status.toUpperCase()}</span></td></tr>
+        </table>
+        
+        <h3>Description</h3>
+        <p>${report.description}</p>
+        
+        <h3>Damaged Materials</h3>
+        <table>
+            <thead><tr><th>Material</th><th>Quantity</th><th>Unit</th><th>Cost (AED)</th><th>Total (AED)</th></tr></thead>
+            <tbody>
+                ${report.materials.map(m => `<tr><td>${m.name}</td><td>${m.qty}</td><td>${m.unit}</td><td>${m.cost}</td><td>${parseInt(m.qty) * parseInt(m.cost) || 0}</td></tr>`).join('')}
+            </tbody>
+            <tfoot><tr><td colspan="4" style="text-align:right"><strong>Grand Total:</strong></td><td><strong>${report.materials.reduce((sum, m) => sum + (parseInt(m.qty) * parseInt(m.cost) || 0), 0)} AED</strong></td></tr></tfoot>
+        </table>
+        
+        ${report.notes ? `<h3>Notes</h3><p>${report.notes}</p>` : ''}
+        
+        <hr>
+        <p style="text-align:center; color:#94a3b8;">Generated on ${new Date().toLocaleString()}</p>
+    </body>
+    </html>`;
+    
+    const blob = new Blob([htmlContent], { type: 'application/msword' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Damage_Report_${report.refNo}.doc`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    showToast('Word document downloaded');
+}
+
+// Submit Report with Photo Uploads
+document.getElementById('damageForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentProject) { showToast('Select a project first', true); return; }
+    
+    const materials = []; 
+    document.querySelectorAll('#materialsList .material-row').forEach(row => { 
+        const name = row.querySelector('.mat-name')?.value; 
+        if (name && name.trim()) materials.push({ name: name.trim(), qty: row.querySelector('.mat-qty')?.value || '', unit: row.querySelector('.mat-unit')?.value || '', cost: row.querySelector('.mat-cost')?.value || '' }); 
+    });
+    if (materials.length === 0) { showToast('Add at least one material', true); return; }
+    
+    const tempId = 'temp_' + Date.now();
+    const reportData = { 
+        refNo: document.getElementById('refNo').value, 
+        projName: document.getElementById('projName').value, 
+        location: document.getElementById('location').value, 
+        damageDate: document.getElementById('damageDate').value, 
+        damageTime: document.getElementById('damageTime').value, 
+        description: document.getElementById('description').value, 
+        subcon: document.getElementById('subcon').value, 
+        mainCon: document.getElementById('mainCon').value, 
+        materials, 
+        notes: document.getElementById('notes').value, 
+        photos: [], 
+        createdBy: currentUser.email, 
+        createdByName: currentUser.fullName, 
+        projectId: currentProject.id 
+    };
+    
+    showLoading(true);
+    
+    // First submit the report
+    const result = await callAPI('submitReport', { data: JSON.stringify(reportData) });
+    
+    if (result.success) {
+        // Then upload photos one by one
+        let uploadedCount = 0;
+        for (const photo of currentPhotos) {
+            const uploadResult = await uploadPhotoToDrive(photo, result.reportId, currentProject.id);
+            if (uploadResult.success) uploadedCount++;
+        }
+        
+        showToast(`Report ${reportData.refNo} submitted with ${uploadedCount} photos!`);
+        document.getElementById('damageForm').reset();
+        currentPhotos = [];
+        document.getElementById('photoPreview').innerHTML = '';
+        const nextNum = (currentProject.lastNumber || 0) + 2;
+        document.getElementById('refNo').value = `${currentProject.prefix}-DR-${String(nextNum).padStart(3, '0')}`;
+        document.getElementById('projName').value = currentProject.name;
+        document.getElementById('mainCon').value = currentProject.mainContractor || '';
+        document.querySelectorAll('#materialsList .material-row').forEach((row, idx) => { 
+            if (idx > 0) row.remove(); 
+            else { 
+                row.querySelector('.mat-name').value = ''; 
+                row.querySelector('.mat-qty').value = ''; 
+                row.querySelector('.mat-unit').value = ''; 
+                row.querySelector('.mat-cost').value = ''; 
+            } 
+        });
+        await loadReports(); 
+        await loadProjects();
+    } else { 
+        showToast(result.message || 'Submission failed', true); 
+    }
+    showLoading(false);
+});
+
+function addMaterialRow() { 
+    const container = document.getElementById('materialsList'); 
+    const div = document.createElement('div'); 
+    div.className = 'material-row'; 
+    div.innerHTML = `<input type="text" placeholder="Material" class="mat-name"><input type="text" placeholder="Qty" class="mat-qty"><input type="text" placeholder="Unit" class="mat-unit"><input type="text" placeholder="Cost (AED)" class="mat-cost"><button type="button" class="removeMatBtn" style="background:#ef4444;color:white;border:none;padding:8px 15px;border-radius:8px">✕</button>`; 
+    container.appendChild(div); 
+}
+
+// Photo upload with compression
+function compressImage(dataUrl, maxWidth = 1024, quality = 0.7) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            if (width > maxWidth) { height = (height * maxWidth) / width; width = maxWidth; }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = dataUrl;
+    });
+}
+
+async function handlePhotoUpload(input) {
+    const files = Array.from(input.files);
+    if (currentPhotos.length + files.length > 5) { showToast('Max 5 photos allowed', true); return; }
+    showLoading(true);
+    for (const file of files) {
+        if (file.size > 5 * 1024 * 1024) { showToast('Photo too large (max 5MB)', true); continue; }
+        const reader = new FileReader();
+        const compressed = await new Promise((resolve) => {
+            reader.onload = async (e) => {
+                const compressedData = await compressImage(e.target.result, 1024, 0.7);
+                resolve(compressedData);
+            };
+            reader.readAsDataURL(file);
+        });
+        currentPhotos.push(compressed);
+        updatePhotoPreview();
+    }
+    showLoading(false);
+    input.value = '';
+}
+
+function updatePhotoPreview() {
+    const preview = document.getElementById('photoPreview');
+    preview.innerHTML = '';
+    currentPhotos.forEach((photo, idx) => {
+        const div = document.createElement('div');
+        div.style.position = 'relative';
+        div.style.display = 'inline-block';
+        div.style.margin = '5px';
+        div.innerHTML = `<img src="${photo}" class="preview-img"><button onclick="removePhoto(${idx})" style="position:absolute;top:-8px;right:-8px;background:#ef4444;color:white;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;">✕</button>`;
+        preview.appendChild(div);
+    });
+}
+
+function removePhoto(idx) { currentPhotos.splice(idx, 1); updatePhotoPreview(); }
+
+// Logo upload with compression
+function compressLogo(dataUrl, maxWidth = 150, quality = 0.8) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            if (width > maxWidth) { height = (height * maxWidth) / width; width = maxWidth; }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = dataUrl;
+    });
+}
+
+document.getElementById('logoUploadArea')?.addEventListener('click', () => document.getElementById('logoInput').click());
+document.getElementById('logoInput')?.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        showLoading(true);
+        const reader = new FileReader();
+        reader.onload = async (ev) => {
+            const compressedLogo = await compressLogo(ev.target.result, 150, 0.8);
+            pendingLogoData = compressedLogo;
+            document.getElementById('logoPreview').src = compressedLogo;
+            document.getElementById('logoPreview').style.display = 'block';
+            showLoading(false);
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+document.getElementById('editLogoUploadArea')?.addEventListener('click', () => document.getElementById('editLogoInput').click());
+document.getElementById('editLogoInput')?.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        showLoading(true);
+        const reader = new FileReader();
+        reader.onload = async (ev) => {
+            const compressedLogo = await compressLogo(ev.target.result, 150, 0.8);
+            pendingEditLogoData = compressedLogo;
+            document.getElementById('editLogoPreview').src = compressedLogo;
+            document.getElementById('editLogoPreview').style.display = 'block';
+            showLoading(false);
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+document.getElementById('editProjectForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await saveProjectEdit();
+});
+
+// Tab switching
+document.querySelectorAll('#engineerTabs .nav-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('#engineerTabs .nav-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const tab = btn.dataset.tab;
+        document.getElementById('submitTab').style.display = tab === 'submit' ? 'block' : 'none';
+        document.getElementById('myreportsTab').style.display = tab === 'myreports' ? 'block' : 'none';
+    });
+});
+
+document.querySelectorAll('#adminTabs .nav-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('#adminTabs .nav-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const tab = btn.dataset.tab;
+        document.getElementById('projectsTab').style.display = tab === 'projects' ? 'block' : 'none';
+        document.getElementById('allreportsTab').style.display = tab === 'allreports' ? 'block' : 'none';
+        document.getElementById('usersTab').style.display = tab === 'users' ? 'block' : 'none';
+        if (tab === 'allreports') loadReports();
+        if (tab === 'users') loadUsers();
+    });
+});
+
+// Event listeners
+document.getElementById('loginBtn')?.addEventListener('click', handleLogin);
+document.getElementById('registerBtn')?.addEventListener('click', handleRegister);
+document.getElementById('showRegisterBtn')?.addEventListener('click', showRegister);
+document.getElementById('showLoginBtn')?.addEventListener('click', showLogin);
+document.getElementById('logoutBtn')?.addEventListener('click', logout);
+document.getElementById('addMaterialBtn')?.addEventListener('click', addMaterialRow);
+document.getElementById('createProjectBtn')?.addEventListener('click', createProject);
+document.getElementById('photoUploadBtn')?.addEventListener('click', () => document.getElementById('photoInput').click());
+document.getElementById('photoInput')?.addEventListener('change', (e) => handlePhotoUpload(e.target));
+</script>
+</body>
+</html>
