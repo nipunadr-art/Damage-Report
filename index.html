@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Damage Report System</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root {
+            --bg: #0f1117;
+            --surface: #1a1d26;
+            --surface2: #22263a;
+            --border: #2e3348;
+            --accent: #e8a838;
+            --accent2: #3b7cf7;
+            --danger: #e8514a;
+            --success: #2ecc8a;
+            --text: #e8ecf5;
+            --text2: #8b91a8;
+            --text3: #5a6080;
+            --radius: 12px;
+            --radius-lg: 20px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; min-height: 100vh; }
+        
+        /* ── Loading ── */
+        .loading { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 9999; flex-direction: column; gap: 16px; backdrop-filter: blur(4px); }
+        .loading.active { display: flex; }
+        .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        .loading p { color: var(--text2); font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Auth ── */
+        .auth-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; background: var(--bg); position: relative; overflow: hidden; }
+        .auth-container::before { content: 'DAMAGE REPORT SYSTEM'; position: absolute; font-size: 12vw; font-weight: 700; color: rgba(255,255,255,0.02); white-space: nowrap; letter-spacing: -0.03em; pointer-events: none; transform: rotate(-8deg); }
+        .auth-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 48px 40px; width: 100%; max-width: 440px; position: relative; z-index: 1; }
+        .auth-box::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+        .auth-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 32px; }
+        .auth-logo-icon { width: 44px; height: 44px; background: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .auth-logo h1 { font-size: 1.1rem; font-weight: 700; color: var(--text); line-height: 1.2; }
+        .auth-logo p { font-size: 0.75rem; color: var(--text2); font-family: 'IBM Plex Mono', monospace; }
+        .form-label { display: block; margin-bottom: 7px; font-weight: 500; color: var(--text2); font-size: 0.8rem; letter-spacing: 0.05em; text-transform: uppercase; }
+        .form-input { width: 100%; padding: 12px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-size: 0.95rem; transition: border-color 0.2s; }
+        .form-input:focus { outline: none; border-color: var(--accent); }
+        .form-input[readonly] { color: var(--text2); cursor: default; }
+        .form-group { margin-bottom: 18px; }
+        .btn-primary { width: 100%; padding: 13px; background: var(--accent); color: #000; border: none; border-radius: var(--radius); font-weight: 700; font-size: 0.95rem; cursor: pointer; letter-spacing: 0.02em; transition: opacity 0.2s, transform 0.1s; }
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-primary:active { transform: translateY(0); }
+        .toggle-auth { text-align: center; margin-top: 20px; color: var(--text2); font-size: 0.85rem; cursor: pointer; }
+        .toggle-auth span { color: var(--accent); font-weight: 600; }
+        .toggle-auth:hover span { text-decoration: underline; }
+
+        /* ── App Shell ── */
+        .app-container { max-width: 1400px; margin: 0 auto; padding: 20px; display: none; }
+        .header { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 24px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .header-logo { display: flex; align-items: center; gap: 12px; }
+        .header-logo-icon { width: 36px; height: 36px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+        .header-logo h1 { font-size: 1rem; font-weight: 700; color: var(--text); }
+        .header-logo p { font-size: 0.72rem; color: var(--text2); font-family: 'IBM Plex Mono', monospace; }
+        .header-right { display: flex; align-items: center; gap: 10px; }
+        .user-badge { background: var(--surface2); border: 1px solid var(--border); padding: 6px 14px; border-radius: 40px; font-size: 0.82rem; color: var(--text2); }
+        .logout-btn { background: transparent; border: 1px solid var(--danger); color: var(--danger); padding: 6px 16px; border-radius: 40px; cursor: pointer; font-size: 0.82rem; font-weight: 600; transition: background 0.2s; }
+        .logout-btn:hover { background: var(--danger); color: white; }
+
+        /* ── Nav tabs ── */
+        .nav-tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; width: fit-content; flex-wrap: wrap; }
+        .nav-tab { padding: 8px 20px; background: transparent; border: none; font-weight: 600; cursor: pointer; color: var(--text2); border-radius: 8px; font-size: 0.85rem; font-family: 'IBM Plex Sans', sans-serif; transition: all 0.2s; white-space: nowrap; }
+        .nav-tab.active { background: var(--accent); color: #000; }
+        .nav-tab:hover:not(.active) { background: var(--surface2); color: var(--text); }
+
+        /* ── Cards ── */
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; margin-bottom: 20px; }
+        .card h3 { font-size: 0.95rem; font-weight: 700; color: var(--text); margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.06em; display: flex; align-items: center; gap: 8px; }
+        .card h3 i { color: var(--accent); }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 16px; }
+        label { display: block; margin-bottom: 7px; font-weight: 500; color: var(--text2); font-size: 0.8rem; letter-spacing: 0.05em; text-transform: uppercase; }
+        textarea.form-input { resize: vertical; min-height: 90px; }
+
+        /* ── Photo Upload ── */
+        .photo-upload { border: 2px dashed var(--border); border-radius: var(--radius); padding: 28px 20px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
+        .photo-upload:hover { border-color: var(--accent); background: rgba(232,168,56,0.04); }
+        .photo-upload i { font-size: 2rem; color: var(--text3); margin-bottom: 8px; display: block; }
+        .photo-upload p { color: var(--text2); font-size: 0.85rem; margin-bottom: 4px; }
+        .photo-upload small { color: var(--text3); font-size: 0.75rem; font-family: 'IBM Plex Mono', monospace; }
+        .photo-preview { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+        .photo-thumb { position: relative; display: inline-block; }
+        .photo-thumb img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 2px solid var(--border); display: block; }
+        .photo-thumb .remove-photo { position: absolute; top: -6px; right: -6px; background: var(--danger); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .photo-count { font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; color: var(--text2); margin-top: 6px; }
+
+        /* ── Materials ── */
+        .material-row { display: grid; grid-template-columns: 3fr 1fr 1fr 2fr auto; gap: 8px; margin-bottom: 8px; align-items: center; }
+        .material-row input { padding: 9px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-size: 0.88rem; }
+        .material-row input:focus { outline: none; border-color: var(--accent); }
+        @media (max-width: 600px) { .material-row { grid-template-columns: 1fr 1fr; } }
+
+        /* ── Project Cards ── */
+        .project-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 8px; cursor: pointer; display: flex; align-items: center; gap: 14px; transition: border-color 0.2s, background 0.2s; }
+        .project-card:hover { border-color: var(--accent2); }
+        .project-card.selected { border-color: var(--success); background: rgba(46,204,138,0.06); }
+        .project-card-icon { width: 44px; height: 44px; background: var(--surface); border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .project-card-icon img { width: 100%; height: 100%; object-fit: contain; }
+        .project-card strong { font-size: 0.92rem; color: var(--text); }
+        .project-card small { color: var(--text2); font-size: 0.78rem; font-family: 'IBM Plex Mono', monospace; }
+
+        /* ── Tables ── */
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text3); font-weight: 600; background: var(--surface2); }
+        .data-table td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 0.88rem; color: var(--text); }
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tr:hover td { background: var(--surface2); }
+        .data-table-wrap { overflow-x: auto; }
+
+        /* ── Status badges ── */
+        .status-badge { padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; display: inline-block; letter-spacing: 0.04em; text-transform: uppercase; font-family: 'IBM Plex Mono', monospace; }
+        .status-pending { background: rgba(232,168,56,0.15); color: var(--accent); border: 1px solid rgba(232,168,56,0.3); }
+        .status-approved { background: rgba(46,204,138,0.12); color: var(--success); border: 1px solid rgba(46,204,138,0.3); }
+
+        /* ── Action buttons ── */
+        .action-btn { padding: 5px 10px; border-radius: 6px; border: none; cursor: pointer; font-size: 11px; font-weight: 700; letter-spacing: 0.03em; transition: opacity 0.2s; }
+        .action-btn:hover { opacity: 0.8; }
+        .btn-view { background: var(--accent2); color: white; }
+        .btn-pdf { background: var(--danger); color: white; }
+        .btn-word { background: var(--success); color: #000; }
+        .btn-edit { background: var(--accent); color: #000; }
+        .btn-delete { background: var(--danger); color: white; }
+        .btn-approve { background: var(--success); color: #000; }
+        .btn-secondary { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 9px 18px; border-radius: var(--radius); cursor: pointer; font-size: 0.85rem; font-weight: 600; font-family: 'IBM Plex Sans', sans-serif; transition: border-color 0.2s; }
+        .btn-secondary:hover { border-color: var(--accent); }
+        .btn-success { background: var(--success); color: #000; border: none; padding: 12px 24px; border-radius: var(--radius); cursor: pointer; font-weight: 700; font-size: 0.9rem; font-family: 'IBM Plex Sans', sans-serif; transition: opacity 0.2s; }
+        .btn-success:hover { opacity: 0.85; }
+        .action-buttons { display: flex; gap: 5px; flex-wrap: wrap; }
+
+        /* ── Logo upload ── */
+        .logo-upload-area { border: 2px dashed var(--border); border-radius: var(--radius); padding: 18px; text-align: center; cursor: pointer; color: var(--text2); font-size: 0.85rem; transition: border-color 0.2s; }
+        .logo-upload-area:hover { border-color: var(--accent); }
+        .logo-preview { max-width: 100px; max-height: 60px; margin-top: 10px; display: none; }
+
+        /* ── Modal ── */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 10000; backdrop-filter: blur(4px); padding: 20px; }
+        .modal.open { display: flex; }
+        .modal-content { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px; max-width: 920px; width: 100%; max-height: 88vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-header h2 { font-size: 1rem; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: 0.05em; }
+        .modal-close { background: var(--danger); color: white; border: none; padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 0.82rem; font-weight: 700; }
+
+        /* ── Project filter bar ── */
+        .project-filter { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+        .filter-chip { padding: 5px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: all 0.2s; }
+        .filter-chip.active { background: var(--accent2); border-color: var(--accent2); color: white; }
+
+        /* ── Selected project info ── */
+        .selected-project-banner { background: rgba(46,204,138,0.06); border: 1px solid rgba(46,204,138,0.2); border-radius: var(--radius); padding: 12px 16px; margin-top: 14px; display: none; align-items: center; gap: 14px; }
+
+        /* ── Toast ── */
+        .toast { position: fixed; bottom: 24px; right: 24px; background: var(--success); color: #000; padding: 12px 20px; border-radius: var(--radius); z-index: 99999; font-weight: 600; font-size: 0.88rem; animation: slideIn 0.3s ease; max-width: 320px; }
+        .toast.error { background: var(--danger); color: white; }
+        @keyframes slideIn { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* ── Utility ── */
+        .divider { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
+        .empty-state { text-align: center; padding: 40px; color: var(--text2); }
+        .empty-state i { font-size: 2.5rem; color: var(--text3); display: block; margin-bottom: 12px; }
+        .section-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); font-weight: 700; margin-bottom: 10px; margin-top: 18px; }
+        .info-row { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
+        .info-row .info-label { color: var(--text2); min-width: 140px; font-size: 0.8rem; }
+
+        @media (max-width: 768px) { .auth-box { padding: 32px 24px; } .card { padding: 16px; } .app-container { padding: 12px; } .material-row { grid-template-columns: 1fr 1fr; } }
+    </style>
+</head>
+<body>
+
+<div class="loading" id="loading">
+    <div class="spinner"></div>
+    <p id="loadingText">Loading...</p>
+</div>
+
+<!-- ═══════════════ AUTH ═══════════════ -->
+<div id="authPage" class="auth-container">
+    <div class="auth-box">
+        <div class="auth-logo">
+            <div class="auth-logo-icon">📋</div>
+            <div><h1>Damage Report System</h1><p>SITE MANAGEMENT PORTAL</p></div>
+        </div>
+
+        <div id="loginForm">
+            <div class="form-group"><label>Email Address</label><input type="email" id="loginEmail" class="form-input" placeholder="you@company.com"></div>
+            <div class="form-group"><label>Password</label><input type="password" id="loginPassword" class="form-input" placeholder="••••••••" onkeydown="if(event.key==='Enter')handleLogin()"></div>
+            <button class="btn-primary" onclick="handleLogin()">Sign In →</button>
+            <div class="toggle-auth" onclick="showRegister()">No account? <span>Register as Engineer</span></div>
+            <div style="margin-top:16px;text-align:center;">
+                <button onclick="testConnection()" style="background:transparent;border:1px solid var(--border);color:var(--text3);padding:6px 16px;border-radius:8px;cursor:pointer;font-size:0.78rem;font-family:'IBM Plex Mono',monospace;">
+                    🔌 Test API Connection
+                </button>
+                <div id="connectionStatus" style="margin-top:8px;font-size:0.78rem;font-family:'IBM Plex Mono',monospace;color:var(--text3);"></div>
+            </div>
+        </div>
+
+        <div id="registerForm" style="display:none;">
+            <div class="form-group"><label>Full Name</label><input type="text" id="regName" class="form-input" placeholder="John Smith"></div>
+            <div class="form-group"><label>Email Address</label><input type="email" id="regEmail" class="form-input" placeholder="john@company.com"></div>
+            <div class="form-group"><label>Password (min 6 chars)</label><input type="password" id="regPassword" class="form-input" placeholder="Create a password"></div>
+            <button class="btn-primary" onclick="handleRegister()">Create Account →</button>
+            <div class="toggle-auth" onclick="showLogin()">Have an account? <span>Sign in</span></div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ MAIN APP ═══════════════ -->
+<div id="mainApp" class="app-container">
+    <div class="header">
+        <div class="header-logo">
+            <div class="header-logo-icon">📋</div>
+            <div><h1>Damage Report System</h1><p>SITE MANAGEMENT PORTAL</p></div>
+        </div>
+        <div class="header-right">
+            <span class="user-badge" id="userNameDisplay"></span>
+            <button class="logout-btn" onclick="logout()">Sign Out</button>
+        </div>
+    </div>
+
+    <!-- ── ENGINEER VIEW ── -->
+    <div id="engineerView">
+        <div class="nav-tabs" id="engineerTabs">
+            <button class="nav-tab active" onclick="switchEngineerTab('submit', this)">📝 Submit Report</button>
+            <button class="nav-tab" onclick="switchEngineerTab('myreports', this)">📋 My Reports</button>
+        </div>
+
+        <!-- Submit Tab -->
+        <div id="submitTab">
+            <div class="card">
+                <h3><i class="fas fa-folder-open"></i> Select Project</h3>
+                <div id="projectList"><div class="empty-state"><i class="fas fa-folder"></i><p>No projects available. Contact admin.</p></div></div>
+                <div class="selected-project-banner" id="selectedProjectInfo"></div>
+            </div>
+
+            <div class="card" id="reportFormCard" style="display:none;">
+                <h3><i class="fas fa-plus-circle"></i> New Damage Report</h3>
+                <form id="damageForm" onsubmit="event.preventDefault(); submitReport();">
+                    <div class="form-grid">
+                        <div class="form-group"><label>Reference Number</label><input type="text" id="refNo" class="form-input" readonly></div>
+                        <div class="form-group"><label>Project</label><input type="text" id="projName" class="form-input" readonly></div>
+                        <div class="form-group"><label>Location *</label><input type="text" id="location" class="form-input" required placeholder="e.g. Block A, Level 3"></div>
+                        <div class="form-group"><label>Damage Date *</label><input type="date" id="damageDate" class="form-input" required></div>
+                        <div class="form-group"><label>Time</label><input type="text" id="damageTime" class="form-input" placeholder="e.g. After 06:00 pm"></div>
+                        <div class="form-group"><label>Sub-Contractor</label><input type="text" id="subcon" class="form-input" placeholder="Sub-Contractor name"></div>
+                        <div class="form-group"><label>Main Contractor</label><input type="text" id="mainCon" class="form-input" readonly></div>
+                    </div>
+                    <div class="form-group"><label>Description *</label><textarea id="description" class="form-input" rows="4" required placeholder="Describe what was damaged, how it happened..."></textarea></div>
+
+                    <div class="section-label">Damaged Materials</div>
+                    <div id="materialsList">
+                        <div class="material-row">
+                            <input type="text" placeholder="Material name" class="mat-name">
+                            <input type="text" placeholder="Qty" class="mat-qty">
+                            <input type="text" placeholder="Unit" class="mat-unit">
+                            <input type="text" placeholder="Cost (AED)" class="mat-cost">
+                            <button type="button" onclick="removeMaterialRow(this)" style="background:var(--danger);color:white;border:none;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;">✕</button>
+                        </div>
+                    </div>
+                    <button type="button" onclick="addMaterialRow()" class="btn-secondary" style="margin-bottom:20px;">➕ Add Material Row</button>
+
+                    <div class="form-group">
+                        <label>📷 Photos (max 5, up to 5MB each)</label>
+                        <div class="photo-upload" id="photoDropArea" onclick="document.getElementById('photoInput').click()">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Click to upload photos</p>
+                            <small>JPEG / PNG / WEBP</small>
+                        </div>
+                        <input type="file" id="photoInput" multiple accept="image/*" style="display:none" onchange="handlePhotoUpload(this)">
+                        <div id="photoPreview" class="photo-preview"></div>
+                        <div id="photoCount" class="photo-count"></div>
+                    </div>
+
+                    <div class="form-group"><label>Additional Notes</label><textarea id="notes" class="form-input" rows="2" placeholder="Any extra notes for the report..."></textarea></div>
+
+                    <button type="submit" class="btn-success" style="width:100%;margin-top:8px;">📤 Submit Report</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- My Reports Tab -->
+        <div id="myreportsTab" style="display:none;">
+            <div class="card">
+                <h3><i class="fas fa-history"></i> My Reports</h3>
+                <div class="project-filter" id="myReportsProjectFilter"></div>
+                <div class="data-table-wrap"><div id="myReports"><div class="empty-state"><i class="fas fa-file-alt"></i><p>No reports yet.</p></div></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── ADMIN VIEW ── -->
+    <div id="adminView" style="display:none;">
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="switchAdminTab('projects', this)">📁 Projects</button>
+            <button class="nav-tab" onclick="switchAdminTab('allreports', this)">📊 All Reports</button>
+            <button class="nav-tab" onclick="switchAdminTab('users', this)">👥 Users</button>
+        </div>
+
+        <div id="projectsTab">
+            <div class="card">
+                <h3><i class="fas fa-plus-circle"></i> Create New Project</h3>
+                <div class="form-grid">
+                    <div class="form-group"><label>Project Name</label><input type="text" id="newProjectName" class="form-input" placeholder="e.g. Site Alpha Tower"></div>
+                    <div class="form-group"><label>Reference Prefix</label><input type="text" id="newProjectPrefix" class="form-input" placeholder="e.g. LOR-IMA-PDC" value="LOR-IMA-PDC"></div>
+                    <div class="form-group"><label>Start Number</label><input type="number" id="newProjectStartNum" class="form-input" value="1" min="1"></div>
+                    <div class="form-group"><label>Main Contractor</label><input type="text" id="newMainContractor" class="form-input" placeholder="Contractor company name"></div>
+                </div>
+                <div class="form-group">
+                    <label>Company Logo</label>
+                    <div class="logo-upload-area" onclick="document.getElementById('logoInput').click()">🏢 Click to upload company logo (PNG/JPG)</div>
+                    <input type="file" id="logoInput" accept="image/*" style="display:none" onchange="handleLogoUpload(this)">
+                    <img id="logoPreview" class="logo-preview">
+                </div>
+                <button onclick="createProject()" class="btn-success">💾 Create Project</button>
+            </div>
+            <div class="card">
+                <h3><i class="fas fa-list"></i> Existing Projects</h3>
+                <div id="projectsList"><div class="empty-state"><i class="fas fa-folder-open"></i><p>No projects yet.</p></div></div>
+            </div>
+        </div>
+
+        <div id="allreportsTab" style="display:none;">
+            <div class="card">
+                <h3><i class="fas fa-chart-line"></i> All Reports</h3>
+                <div class="project-filter" id="adminReportsProjectFilter"></div>
+                <div class="data-table-wrap"><div id="adminReports"><div class="empty-state"><i class="fas fa-file-alt"></i><p>No reports yet.</p></div></div></div>
+            </div>
+        </div>
+
+        <div id="usersTab" style="display:none;">
+            <div class="card">
+                <h3><i class="fas fa-users"></i> Registered Users</h3>
+                <div class="data-table-wrap"><div id="usersList"></div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ VIEW REPORT MODAL ═══════════════ -->
+<div id="viewReportModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fas fa-file-alt"></i> Report Preview</h2>
+            <button class="modal-close" onclick="closeViewModal()">✕ Close</button>
+        </div>
+        <div id="reportPreviewContent"></div>
+        <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+            <button onclick="exportCurrentPDF()" class="action-btn btn-pdf" style="padding:10px 18px;font-size:0.85rem;"><i class="fas fa-file-pdf"></i> Download PDF</button>
+            <button onclick="exportCurrentWord()" class="action-btn btn-word" style="padding:10px 18px;font-size:0.85rem;"><i class="fas fa-file-word"></i> Download Word</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// CONFIGURATION — paste your deployed Apps Script URL here
+// ══════════════════════════════════════════════
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxZbj4kjJ8_Up-dyYKuXnAjVzGrVtVuNaZBcXExEG1yQgaklWdzIlkGhX8_MX96zd1-ng/exec';
+
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let currentUser   = null;
+let currentPhotos = [];   // array of { dataUrl, filename }
+let currentProject = null;
+let projects      = [];
+let allReports    = [];
+let currentViewReport = null;
+let pendingLogoData = null;
+// Project filter state
+let myReportsFilter   = 'all';
+let adminReportsFilter = 'all';
+
+// ══════════════════════════════════════════════
+// API — fetch() GET with redirect:'follow'
+//
+// WHY NOT POST: Apps Script POST triggers a CORS
+// preflight (OPTIONS). Apps Script cannot respond to
+// OPTIONS → browser blocks it.
+//
+// WHY NOT JSONP (<script> tag): Apps Script /exec
+// redirects (302) to a different subdomain. Browsers
+// block cross-origin redirects from <script> tags.
+//
+// THE WORKING SOLUTION: fetch() GET with redirect:'follow'
+// - GET is a "simple request" → NO preflight
+// - fetch follows redirects automatically
+// - Apps Script responds with JSON + no CORS needed
+// - Works from any origin including GitHub Pages
+//
+// For large data (photos, report data): we encode as
+// a URL-safe base64 string split across params.
+// Reports are sent as a compressed JSON string.
+// Photos are sent one at a time via separate GET calls.
+// ══════════════════════════════════════════════
+
+async function apiCall(action, params) {
+    const url = new URL(APPS_SCRIPT_URL);
+    url.searchParams.set('action', action);
+
+    // Attach params — objects become JSON strings
+    Object.entries(params || {}).forEach(([k, v]) => {
+        if (v === undefined || v === null) return;
+        if (typeof v === 'object') {
+            url.searchParams.set(k, JSON.stringify(v));
+        } else {
+            url.searchParams.set(k, String(v));
+        }
+    });
+
+    const res = await fetch(url.toString(), {
+        method: 'GET',
+        redirect: 'follow'
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return await res.json();
+}
+
+// Upload one photo to Drive via GET request.
+// dataUrl is a compressed base64 image.
+// Returns { success, url }.
+async function uploadPhotoChunk(dataUrl, filename, refNo) {
+    const url = new URL(APPS_SCRIPT_URL);
+    url.searchParams.set('action', 'uploadPhoto');
+    url.searchParams.set('filename', filename || 'photo.jpg');
+    url.searchParams.set('refNo', refNo || 'UPLOAD');
+    url.searchParams.set('dataUrl', dataUrl);
+
+    const res = await fetch(url.toString(), {
+        method: 'GET',
+        redirect: 'follow'
+    });
+    if (!res.ok) return { success: false, url: '' };
+    return await res.json();
+}
+
+// ══════════════════════════════════════════════
+// UI HELPERS
+// ══════════════════════════════════════════════
+function showToast(msg, isError) {
+    const t = document.createElement('div');
+    t.className = 'toast' + (isError ? ' error' : '');
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 4000);
+}
+
+function showLoading(show, msg) {
+    document.getElementById('loading').classList.toggle('active', !!show);
+    if (msg) document.getElementById('loadingText').textContent = msg;
+    else document.getElementById('loadingText').textContent = 'Loading...';
+}
+
+async function testConnection() {
+    const statusEl = document.getElementById('connectionStatus');
+    statusEl.textContent = '⏳ Testing...';
+    statusEl.style.color = 'var(--text2)';
+    try {
+        const result = await apiCall('test', {});
+        if (result.success) {
+            statusEl.textContent = '✅ Connected! ' + (result.message || '');
+            statusEl.style.color = 'var(--success)';
+        } else {
+            statusEl.textContent = '⚠️ Reached server but: ' + (result.message || 'unknown error');
+            statusEl.style.color = 'var(--accent)';
+        }
+    } catch(e) {
+        statusEl.textContent = '❌ Failed: ' + e.message;
+        statusEl.style.color = 'var(--danger)';
+        console.error('Connection test error:', e);
+    }
+}
+
+function generateRefNo() {
+    if (!currentProject) return 'SELECT-PROJECT-FIRST';
+    const next = (parseInt(currentProject.lastNumber) || 0) + 1;
+    return currentProject.prefix + '-DR-' + String(next).padStart(4, '0');
+}
+
+// ══════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════
+async function handleLogin() {
+    const email    = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    if (!email || !password) { showToast('Enter email and password', true); return; }
+    showLoading(true, 'Signing in...');
+    try {
+        const result = await apiCall('login', { email, password });
+        showLoading(false);
+        if (result.success) {
+            currentUser = result.user;
+            initApp();
+        } else {
+            showToast(result.message || 'Login failed', true);
+        }
+    } catch(e) {
+        showLoading(false);
+        showToast('Connection error: ' + e.message, true);
+        console.error('Login error:', e);
+    }
+}
+
+async function handleRegister() {
+    const name     = document.getElementById('regName').value.trim();
+    const email    = document.getElementById('regEmail').value.trim();
+    const password = document.getElementById('regPassword').value;
+    if (!name || !email || !password) { showToast('Fill all fields', true); return; }
+    if (password.length < 6) { showToast('Password must be at least 6 characters', true); return; }
+    showLoading(true, 'Creating account...');
+    try {
+        const result = await apiCall('register', { name, email, password, role: 'engineer' });
+        showLoading(false);
+        if (result.success) {
+            showToast('Registered! Please log in.');
+            showLogin();
+            document.getElementById('loginEmail').value = email;
+        } else {
+            showToast(result.message || 'Registration failed', true);
+        }
+    } catch(e) {
+        showLoading(false);
+        showToast('Connection error: ' + e.message, true);
+        console.error('Register error:', e);
+    }
+}
+
+function showRegister() {
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('registerForm').style.display = 'block';
+}
+function showLogin() {
+    document.getElementById('loginForm').style.display = 'block';
+    document.getElementById('registerForm').style.display = 'none';
+}
+function logout() {
+    currentUser = null; currentPhotos = []; currentProject = null; projects = []; allReports = [];
+    document.getElementById('authPage').style.display = 'flex';
+    document.getElementById('mainApp').style.display = 'none';
+    showLogin();
+}
+
+// ══════════════════════════════════════════════
+// APP INIT
+// ══════════════════════════════════════════════
+function initApp() {
+    document.getElementById('authPage').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    document.getElementById('userNameDisplay').textContent =
+        '👤 ' + currentUser.fullName + ' (' + currentUser.role + ')';
+    if (currentUser.role === 'admin') {
+        document.getElementById('adminView').style.display = 'block';
+        document.getElementById('engineerView').style.display = 'none';
+        loadProjects();
+        loadReports();
+        loadUsers();
+    } else {
+        document.getElementById('adminView').style.display = 'none';
+        document.getElementById('engineerView').style.display = 'block';
+        loadProjects();
+        loadReports();
+    }
+    showToast('Welcome, ' + currentUser.fullName + '!');
+}
+
+// ══════════════════════════════════════════════
+// TAB SWITCHES
+// ══════════════════════════════════════════════
+function switchEngineerTab(tab, btn) {
+    document.getElementById('submitTab').style.display    = tab === 'submit'    ? 'block' : 'none';
+    document.getElementById('myreportsTab').style.display = tab === 'myreports' ? 'block' : 'none';
+    document.querySelectorAll('#engineerTabs .nav-tab').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+}
+
+function switchAdminTab(tab, btn) {
+    document.getElementById('projectsTab').style.display   = tab === 'projects'   ? 'block' : 'none';
+    document.getElementById('allreportsTab').style.display = tab === 'allreports' ? 'block' : 'none';
+    document.getElementById('usersTab').style.display      = tab === 'users'      ? 'block' : 'none';
+    document.querySelectorAll('#adminView .nav-tabs .nav-tab').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    if (tab === 'allreports') loadReports();
+    if (tab === 'users') loadUsers();
+}
+
+// ══════════════════════════════════════════════
+// PROJECTS
+// ══════════════════════════════════════════════
+async function loadProjects() {
+    try {
+        const result = await apiCall('getProjects', {});
+        if (result.success) {
+            projects = result.projects || [];
+            renderProjectList();
+            if (currentUser && currentUser.role === 'admin') renderAdminProjects();
+            buildProjectFilters();
+        }
+    } catch(e) { console.error('loadProjects error', e); showToast('Load error: ' + e.message, true); }
+}
+
+function renderProjectList() {
+    const container = document.getElementById('projectList');
+    if (!container) return;
+    if (projects.length === 0) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-folder"></i><p>No projects available. Contact admin.</p></div>';
+        return;
+    }
+    container.innerHTML = projects.map(p => `
+        <div class="project-card" id="pcard_${p.id}" onclick="selectProject('${p.id}', this)">
+            <div class="project-card-icon">
+                ${p.logo ? `<img src="${p.logo}" alt="logo">` : '📁'}
+            </div>
+            <div>
+                <strong>${escHtml(p.name)}</strong><br>
+                <small>${escHtml(p.prefix)} · ${escHtml(p.mainContractor || 'No contractor set')}</small>
+            </div>
+        </div>`).join('');
+}
+
+function selectProject(projectId, cardEl) {
+    currentProject = projects.find(p => p.id === projectId) || null;
+    if (!currentProject) return;
+
+    document.querySelectorAll('.project-card').forEach(c => c.classList.remove('selected'));
+    cardEl.classList.add('selected');
+
+    const banner = document.getElementById('selectedProjectInfo');
+    banner.style.display = 'flex';
+    banner.innerHTML = `
+        ${currentProject.logo ? `<img src="${currentProject.logo}" style="height:44px;border-radius:6px;">` : '<span style="font-size:1.8rem">📁</span>'}
+        <div>
+            <strong style="color:var(--success)">${escHtml(currentProject.name)}</strong>
+            <br><small style="color:var(--text2);font-family:'IBM Plex Mono',monospace;">Format: ${escHtml(currentProject.prefix)}-DR-XXXX</small>
+        </div>`;
+
+    document.getElementById('reportFormCard').style.display = 'block';
+    document.getElementById('projName').value = currentProject.name;
+    document.getElementById('mainCon').value  = currentProject.mainContractor || '';
+    document.getElementById('refNo').value    = generateRefNo();
+}
+
+async function createProject() {
+    const name           = document.getElementById('newProjectName').value.trim();
+    const prefix         = document.getElementById('newProjectPrefix').value.trim();
+    const startNumber    = parseInt(document.getElementById('newProjectStartNum').value) || 1;
+    const mainContractor = document.getElementById('newMainContractor').value.trim();
+    if (!name || !prefix) { showToast('Project name and prefix are required', true); return; }
+
+    // Upload logo to Drive first (same pattern as photos)
+    let logoUrl = '';
+    if (pendingLogoData && pendingLogoData.startsWith('data:')) {
+        showLoading(true, 'Uploading logo...');
+        try {
+            const res = await uploadPhotoChunk(pendingLogoData, 'logo_' + prefix + '.png', 'Logos');
+            logoUrl = (res && res.success && res.url) ? res.url : pendingLogoData;
+        } catch(e) {
+            logoUrl = pendingLogoData; // fallback: keep base64
+        }
+    }
+
+    showLoading(true, 'Creating project...');
+    try {
+        const result = await apiCall('createProject', { name, prefix, startNumber, mainContractor, logo: logoUrl });
+        showLoading(false);
+        if (result.success) {
+            showToast('Project created!');
+            document.getElementById('newProjectName').value = '';
+            document.getElementById('newMainContractor').value = '';
+            pendingLogoData = null;
+            document.getElementById('logoPreview').style.display = 'none';
+            await loadProjects();
+        } else {
+            showToast(result.message || 'Failed to create project', true);
+        }
+    } catch(e) {
+        showLoading(false);
+        showToast('Network error', true);
+    }
+}
+
+function renderAdminProjects() {
+    const container = document.getElementById('projectsList');
+    if (!container) return;
+    if (projects.length === 0) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-folder-open"></i><p>No projects yet.</p></div>';
+        return;
+    }
+    container.innerHTML = projects.map(p => `
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+            <div style="display:flex;align-items:center;gap:12px;">
+                ${p.logo ? `<img src="${p.logo}" style="width:40px;height:40px;object-fit:contain;border-radius:6px;">` : '<span style="font-size:1.5rem">📁</span>'}
+                <div>
+                    <strong style="color:var(--text)">${escHtml(p.name)}</strong><br>
+                    <small style="color:var(--text2);font-family:'IBM Plex Mono',monospace;">Prefix: ${escHtml(p.prefix)} | Contractor: ${escHtml(p.mainContractor||'N/A')}</small>
+                </div>
+            </div>
+            <div class="action-buttons">
+                <button class="action-btn btn-edit" onclick="editProject('${p.id}','${escAttr(p.name)}','${escAttr(p.prefix)}','${escAttr(p.mainContractor||'')}')">Edit</button>
+                <button class="action-btn btn-delete" onclick="deleteProject('${p.id}')">Delete</button>
+            </div>
+        </div>`).join('');
+}
+
+async function editProject(id, name, prefix, mainContractor) {
+    const newName = prompt('Project name:', name);
+    if (!newName) return;
+    const newPrefix = prompt('Prefix:', prefix);
+    if (!newPrefix) return;
+    const newContractor = prompt('Main contractor:', mainContractor);
+    showLoading(true, 'Updating...');
+    try {
+        const result = await apiCall('updateProject', { projectId: id, name: newName, prefix: newPrefix, mainContractor: newContractor || '' });
+        showLoading(false);
+        if (result.success) { showToast('Project updated!'); await loadProjects(); }
+        else showToast('Update failed', true);
+    } catch(e) { showLoading(false); showToast('Error: ' + e.message, true); console.error(e); }
+}
+
+async function deleteProject(id) {
+    if (!confirm('Delete this project? All associated reports will also be deleted.')) return;
+    showLoading(true, 'Deleting...');
+    try {
+        const result = await apiCall('deleteProject', { projectId: id });
+        showLoading(false);
+        if (result.success) { showToast('Project deleted!'); await loadProjects(); await loadReports(); }
+        else showToast('Delete failed', true);
+    } catch(e) { showLoading(false); showToast('Error: ' + e.message, true); console.error(e); }
+}
+
+// ══════════════════════════════════════════════
+// REPORTS
+// ══════════════════════════════════════════════
+async function loadReports() {
+    try {
+        let result;
+        if (currentUser && currentUser.role === 'admin') {
+            result = await apiCall('getReports', {});
+        } else if (currentUser) {
+            result = await apiCall('getMyReports', { email: currentUser.email });
+        }
+        if (result && result.success) {
+            allReports = result.reports || [];
+            renderMyReports();
+            if (currentUser && currentUser.role === 'admin') renderAdminReports();
+            buildProjectFilters();
+        }
+    } catch(e) { console.error('loadReports error', e); }
+}
+
+function buildProjectFilters() {
+    // Collect unique project names from reports
+    const names = [...new Set(allReports.map(r => r.projName).filter(Boolean))];
+
+    const buildChips = (containerId, currentFilter, setFilter, renderFn) => {
+        const el = document.getElementById(containerId);
+        if (!el) return;
+        if (names.length === 0) { el.innerHTML = ''; return; }
+        el.innerHTML = [
+            `<div class="filter-chip ${currentFilter==='all'?'active':''}" onclick="${setFilter}('all',this)"">All</div>`,
+            ...names.map(n => `<div class="filter-chip ${currentFilter===n?'active':''}" onclick="${setFilter}('${escAttr(n)}',this)">${escHtml(n)}</div>`)
+        ].join('');
+    };
+    buildChips('myReportsProjectFilter',   myReportsFilter,   'setMyReportsFilter',    renderMyReports);
+    buildChips('adminReportsProjectFilter', adminReportsFilter,'setAdminReportsFilter',  renderAdminReports);
+}
+
+function setMyReportsFilter(val, el) {
+    myReportsFilter = val;
+    document.querySelectorAll('#myReportsProjectFilter .filter-chip').forEach(c => c.classList.remove('active'));
+    if(el) el.classList.add('active');
+    renderMyReports();
+}
+function setAdminReportsFilter(val, el) {
+    adminReportsFilter = val;
+    document.querySelectorAll('#adminReportsProjectFilter .filter-chip').forEach(c => c.classList.remove('active'));
+    if(el) el.classList.add('active');
+    renderAdminReports();
+}
+
+function renderMyReports() {
+    const container = document.getElementById('myReports');
+    if (!container) return;
+    let reports = allReports.filter(r => r.createdBy === currentUser.email);
+    if (myReportsFilter !== 'all') reports = reports.filter(r => r.projName === myReportsFilter);
+    if (reports.length === 0) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-file-alt"></i><p>No reports found.</p></div>'; return;
+    }
+    container.innerHTML = `
+        <table class="data-table">
+            <thead><tr><th>Ref No</th><th>Project</th><th>Location</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>${reports.map(r => `
+            <tr>
+                <td><strong style="font-family:'IBM Plex Mono',monospace;font-size:0.82rem;">${escHtml(r.refNo)}</strong></td>
+                <td>${escHtml(r.projName)}</td>
+                <td>${escHtml(r.location)}</td>
+                <td>${escHtml(r.damageDate)}</td>
+                <td><span class="status-badge status-${r.status==='approved'?'approved':'pending'}">${r.status||'pending'}</span></td>
+                <td class="action-buttons">
+                    <button class="action-btn btn-view" onclick="viewReport('${r.id}')">View</button>
+                    <button class="action-btn btn-pdf" onclick="exportReportPDF('${r.id}')">PDF</button>
+                    <button class="action-btn btn-word" onclick="exportReportWord('${r.id}')">Word</button>
+                </td>
+            </tr>`).join('')}
+            </tbody>
+        </table>`;
+}
+
+function renderAdminReports() {
+    const container = document.getElementById('adminReports');
+    if (!container) return;
+    let reports = [...allReports];
+    if (adminReportsFilter !== 'all') reports = reports.filter(r => r.projName === adminReportsFilter);
+    if (reports.length === 0) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-file-alt"></i><p>No reports found.</p></div>'; return;
+    }
+    container.innerHTML = `
+        <table class="data-table">
+            <thead><tr><th>Ref No</th><th>Project</th><th>Engineer</th><th>Location</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>${reports.map(r => {
+                const approveBtn = r.status !== 'approved'
+                    ? `<button class="action-btn btn-approve" onclick="approveReport('${r.id}')">Approve</button>` : '';
+                return `<tr>
+                    <td><strong style="font-family:'IBM Plex Mono',monospace;font-size:0.82rem;">${escHtml(r.refNo)}</strong></td>
+                    <td>${escHtml(r.projName)}</td>
+                    <td>${escHtml(r.createdByName||r.createdBy)}</td>
+                    <td>${escHtml(r.location)}</td>
+                    <td>${escHtml(r.damageDate)}</td>
+                    <td><span class="status-badge status-${r.status==='approved'?'approved':'pending'}">${r.status||'pending'}</span></td>
+                    <td class="action-buttons">
+                        <button class="action-btn btn-view" onclick="viewReport('${r.id}')">View</button>
+                        <button class="action-btn btn-pdf" onclick="exportReportPDF('${r.id}')">PDF</button>
+                        <button class="action-btn btn-word" onclick="exportReportWord('${r.id}')">Word</button>
+                        ${approveBtn}
+                        <button class="action-btn btn-delete" onclick="deleteReport('${r.id}')">Del</button>
+                    </td>
+                </tr>`;
+            }).join('')}
+            </tbody>
+        </table>`;
+}
+
+async function approveReport(reportId) {
+    showLoading(true, 'Approving...');
+    try {
+        const result = await apiCall('updateReport', { reportId, status: 'approved' });
+        showLoading(false);
+        if (result.success) { showToast('Report approved!'); await loadReports(); }
+        else showToast('Failed to approve', true);
+    } catch(e) { showLoading(false); showToast('Error: ' + e.message, true); console.error(e); }
+}
+
+async function deleteReport(reportId) {
+    if (!confirm('Delete this report permanently?')) return;
+    showLoading(true, 'Deleting...');
+    try {
+        const result = await apiCall('deleteReport', { reportId });
+        showLoading(false);
+        if (result.success) { showToast('Report deleted!'); await loadReports(); }
+        else showToast('Delete failed', true);
+    } catch(e) { showLoading(false); showToast('Error: ' + e.message, true); console.error(e); }
+}
+
+// ══════════════════════════════════════════════
+// SUBMIT REPORT
+// Two-phase: (1) upload each photo to Drive via
+// individual JSONP calls, collect Drive URLs,
+// (2) submit report metadata (no base64) via JSONP.
+// This avoids CORS entirely.
+// ══════════════════════════════════════════════
+async function submitReport() {
+    if (!currentProject) { showToast('Select a project first', true); return; }
+
+    const materials = [];
+    document.querySelectorAll('#materialsList .material-row').forEach(row => {
+        const name = row.querySelector('.mat-name').value.trim();
+        if (name) materials.push({
+            name,
+            qty:  row.querySelector('.mat-qty').value || '',
+            unit: row.querySelector('.mat-unit').value || '',
+            cost: row.querySelector('.mat-cost').value || ''
+        });
+    });
+    if (materials.length === 0) { showToast('Add at least one material', true); return; }
+
+    const refNo = document.getElementById('refNo').value;
+
+    // ── Phase 1: Upload photos to Drive one by one ──────────────────
+    const uploadedPhotos = [];
+    if (currentPhotos.length > 0) {
+        for (let i = 0; i < currentPhotos.length; i++) {
+            showLoading(true, 'Uploading photo ' + (i+1) + ' of ' + currentPhotos.length + '...');
+            const p = currentPhotos[i];
+            try {
+                const res = await uploadPhotoChunk(p.dataUrl, p.filename, refNo);
+                if (res && res.success && res.url) {
+                    uploadedPhotos.push({ url: res.url, filename: p.filename });
+                } else {
+                    // Fallback: embed base64 directly so PDF/Word still shows the photo
+                    uploadedPhotos.push({ url: p.dataUrl, filename: p.filename });
+                }
+            } catch(e) {
+                uploadedPhotos.push({ url: p.dataUrl, filename: p.filename });
+            }
+        }
+    }
+
+    // ── Phase 2: Submit report metadata with Drive URLs ─────────────
+    showLoading(true, 'Saving report...');
+    const reportData = {
+        refNo,
+        projName:    document.getElementById('projName').value,
+        location:    document.getElementById('location').value,
+        damageDate:  document.getElementById('damageDate').value,
+        damageTime:  document.getElementById('damageTime').value,
+        description: document.getElementById('description').value,
+        subcon:      document.getElementById('subcon').value,
+        mainCon:     document.getElementById('mainCon').value,
+        notes:       document.getElementById('notes').value,
+        materials,
+        photos:        uploadedPhotos,
+        createdBy:     currentUser.email,
+        createdByName: currentUser.fullName,
+        projectId:     currentProject.id,
+        status:        'pending'
+    };
+
+    try {
+        const result = await apiCall('submitReport', { data: JSON.stringify(reportData) });
+        showLoading(false);
+        if (result.success) {
+            showToast('Report ' + refNo + ' submitted!');
+            document.getElementById('damageForm').reset();
+            currentPhotos = [];
+            document.getElementById('photoPreview').innerHTML = '';
+            document.getElementById('photoCount').textContent = '';
+            document.getElementById('refNo').value = generateRefNo();
+            document.getElementById('materialsList').innerHTML = `
+                <div class="material-row">
+                    <input type="text" placeholder="Material name" class="mat-name">
+                    <input type="text" placeholder="Qty" class="mat-qty">
+                    <input type="text" placeholder="Unit" class="mat-unit">
+                    <input type="text" placeholder="Cost (AED)" class="mat-cost">
+                    <button type="button" onclick="removeMaterialRow(this)" style="background:var(--danger);color:white;border:none;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;">✕</button>
+                </div>`;
+            await loadReports();
+        } else {
+            showToast(result.message || 'Submission failed', true);
+        }
+    } catch(e) {
+        showLoading(false);
+        showToast('Network error during submission', true);
+        console.error(e);
+    }
+}
+
+
+// ══════════════════════════════════════════════
+// MATERIALS
+// ══════════════════════════════════════════════
+function addMaterialRow() {
+    const container = document.getElementById('materialsList');
+    const div = document.createElement('div');
+    div.className = 'material-row';
+    div.innerHTML = `
+        <input type="text" placeholder="Material name" class="mat-name">
+        <input type="text" placeholder="Qty" class="mat-qty">
+        <input type="text" placeholder="Unit" class="mat-unit">
+        <input type="text" placeholder="Cost (AED)" class="mat-cost">
+        <button type="button" onclick="removeMaterialRow(this)" style="background:var(--danger);color:white;border:none;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;">✕</button>`;
+    container.appendChild(div);
+}
+function removeMaterialRow(btn) {
+    const row = btn.parentElement;
+    if (document.querySelectorAll('#materialsList .material-row').length > 1) row.remove();
+    else { row.querySelectorAll('input').forEach(i => i.value = ''); }
+}
+
+// ══════════════════════════════════════════════
+// PHOTO UPLOAD — fully client-side compression + preview
+// ══════════════════════════════════════════════
+function compressImage(dataUrl, maxWidth, quality) {
+    return new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => {
+            let { width, height } = img;
+            if (width > maxWidth) { height = Math.round(height * maxWidth / width); width = maxWidth; }
+            const canvas = document.createElement('canvas');
+            canvas.width = width; canvas.height = height;
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = dataUrl;
+    });
+}
+
+async function handlePhotoUpload(input) {
+    const files = Array.from(input.files);
+    if (currentPhotos.length + files.length > 5) {
+        showToast('Maximum 5 photos allowed', true); input.value = ''; return;
+    }
+    showLoading(true, 'Processing photos...');
+    for (const file of files) {
+        if (file.size > 5 * 1024 * 1024) { showToast(file.name + ' is over 5MB, skipped', true); continue; }
+        const dataUrl = await new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onload = e => resolve(e.target.result);
+            reader.readAsDataURL(file);
+        });
+        const compressed = await compressImage(dataUrl, 1200, 0.75);
+        currentPhotos.push({ dataUrl: compressed, filename: file.name });
+    }
+    showLoading(false);
+    input.value = '';
+    updatePhotoPreview();
+}
+
+function updatePhotoPreview() {
+    const preview = document.getElementById('photoPreview');
+    preview.innerHTML = currentPhotos.map((p, i) => `
+        <div class="photo-thumb">
+            <img src="${p.dataUrl}" alt="${escHtml(p.filename)}" title="${escHtml(p.filename)}">
+            <button class="remove-photo" onclick="removePhoto(${i})">✕</button>
+        </div>`).join('');
+    const countEl = document.getElementById('photoCount');
+    countEl.textContent = currentPhotos.length > 0 ? currentPhotos.length + '/5 photos added' : '';
+}
+
+function removePhoto(idx) {
+    currentPhotos.splice(idx, 1);
+    updatePhotoPreview();
+}
+
+// ══════════════════════════════════════════════
+// LOGO UPLOAD
+// ══════════════════════════════════════════════
+function compressLogo(dataUrl) {
+    return new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => {
+            let { width, height } = img;
+            const max = 200;
+            if (width > max) { height = Math.round(height * max / width); width = max; }
+            const canvas = document.createElement('canvas');
+            canvas.width = width; canvas.height = height;
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/png', 0.85));
+        };
+        img.src = dataUrl;
+    });
+}
+
+async function handleLogoUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+    showLoading(true, 'Processing logo...');
+    const dataUrl = await new Promise(resolve => {
+        const r = new FileReader();
+        r.onload = e => resolve(e.target.result);
+        r.readAsDataURL(file);
+    });
+    pendingLogoData = await compressLogo(dataUrl);
+    const preview = document.getElementById('logoPreview');
+    preview.src = pendingLogoData;
+    preview.style.display = 'block';
+    showLoading(false);
+}
+
+// ══════════════════════════════════════════════
+// USERS
+// ══════════════════════════════════════════════
+async function loadUsers() {
+    try {
+        const result = await apiCall('listUsers', {});
+        if (result.success && result.users) {
+            const container = document.getElementById('usersList');
+            if (!result.users.length) { container.innerHTML = '<div class="empty-state"><i class="fas fa-users"></i><p>No users yet.</p></div>'; return; }
+            container.innerHTML = `
+                <table class="data-table">
+                    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Registered</th></tr></thead>
+                    <tbody>${result.users.map(u => `
+                    <tr>
+                        <td>${escHtml(u.name||u.fullName||'')}</td>
+                        <td style="font-family:'IBM Plex Mono',monospace;font-size:0.8rem;">${escHtml(u.email)}</td>
+                        <td><span class="status-badge ${u.role==='admin'?'status-approved':'status-pending'}">${u.role}</span></td>
+                        <td>${u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}</td>
+                    </tr>`).join('')}
+                    </tbody>
+                </table>`;
+        }
+    } catch(e) { console.error('loadUsers error', e); }
+}
+
+// ══════════════════════════════════════════════
+// VIEW / EXPORT REPORT
+// ══════════════════════════════════════════════
+function viewReport(reportId) {
+    const report  = allReports.find(r => r.id === reportId);
+    if (!report) return;
+    const project = projects.find(p => p.name === report.projName) || null;
+    currentViewReport = report;
+    document.getElementById('reportPreviewContent').innerHTML = generateReportHTML(report, project);
+    document.getElementById('viewReportModal').classList.add('open');
+}
+
+function closeViewModal() {
+    document.getElementById('viewReportModal').classList.remove('open');
+    currentViewReport = null;
+}
+
+function getReportAndProject(reportId) {
+    const report  = allReports.find(r => r.id === reportId) || null;
+    const project = report ? (projects.find(p => p.name === report.projName) || null) : null;
+    return { report, project };
+}
+
+function exportCurrentPDF() {
+    if (!currentViewReport) return;
+    const project = projects.find(p => p.name === currentViewReport.projName) || null;
+    const el = document.createElement('div');
+    el.innerHTML = generateReportHTML(currentViewReport, project, true);
+    html2pdf().set({
+        filename: 'Damage_Report_' + currentViewReport.refNo + '.pdf',
+        margin: [10, 10, 10, 10],
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }).from(el).save();
+    showToast('PDF exported!');
+}
+
+function exportCurrentWord() {
+    if (!currentViewReport) return;
+    const project = projects.find(p => p.name === currentViewReport.projName) || null;
+    generateWordDoc(currentViewReport, project);
+}
+
+function exportReportPDF(reportId) {
+    const { report, project } = getReportAndProject(reportId);
+    if (!report) return;
+    const el = document.createElement('div');
+    el.innerHTML = generateReportHTML(report, project, true);
+    html2pdf().set({
+        filename: 'Damage_Report_' + report.refNo + '.pdf',
+        margin: [10,10,10,10],
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }).from(el).save();
+}
+
+function exportReportWord(reportId) {
+    const { report, project } = getReportAndProject(reportId);
+    if (!report) return;
+    generateWordDoc(report, project);
+}
+
+function generateWordDoc(report, project) {
+    const html = generateReportHTML(report, project, true);
+    const full = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+        <style>body{font-family:'Times New Roman',serif;padding:40px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #000;padding:6px}img{max-width:100%}</style>
+        </head><body>${html}</body></html>`;
+    const blob = new Blob([full], { type: 'application/msword' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'Damage_Report_' + report.refNo + '.doc';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast('Word document downloaded!');
+}
+
+// ══════════════════════════════════════════════
+// REPORT HTML GENERATOR
+// ══════════════════════════════════════════════
+function generateReportHTML(report, project, forExport) {
+    const materials = report.materials || [];
+    const total = materials.reduce((s, m) => s + (parseFloat(m.qty)||0) * (parseFloat(m.cost)||0), 0);
+    const dateStr = report.damageDate
+        ? new Date(report.damageDate + 'T00:00:00').toLocaleDateString('en-GB', { day:'2-digit', month:'long', year:'numeric' })
+        : 'N/A';
+    const logoHtml = (project && project.logo)
+        ? `<img src="${project.logo}" style="max-height:80px;margin-bottom:10px;display:block;margin-left:auto;margin-right:auto;">`
+        : '';
+
+    const matRows = materials.map(m => {
+        const lineTotal = ((parseFloat(m.qty)||0) * (parseFloat(m.cost)||0)).toFixed(2);
+        return `<tr>
+            <td style="border:1px solid #000;padding:6px">${escHtml(m.name)}</td>
+            <td style="border:1px solid #000;padding:6px;text-align:center">${escHtml(m.qty)}</td>
+            <td style="border:1px solid #000;padding:6px;text-align:center">${escHtml(m.unit)}</td>
+            <td style="border:1px solid #000;padding:6px;text-align:right">${escHtml(m.cost)}</td>
+            <td style="border:1px solid #000;padding:6px;text-align:right">${lineTotal}</td>
+        </tr>`;
+    }).join('');
+
+    // Photos section — embed base64 images
+    const photos = report.photos || [];
+    const photosHtml = photos.length > 0
+        ? `<div style="margin-top:20px">
+            <p style="font-weight:bold;margin-bottom:10px">SITE PHOTOS</p>
+            <div style="display:flex;flex-wrap:wrap;gap:10px">
+                ${photos.map((p, i) => {
+                    const src = typeof p === 'string' ? p : (p.dataUrl || p.url || '');
+                    return src ? `<div style="text-align:center"><img src="${src}" style="max-width:220px;max-height:160px;border:1px solid #ccc;border-radius:4px;display:block"><small style="font-size:9pt;color:#666">Photo ${i+1}</small></div>` : '';
+                }).join('')}
+            </div>
+          </div>` : '';
+
+    const notesHtml = report.notes ? `<p style="margin-top:10px"><strong>Note:</strong> ${escHtml(report.notes)}</p>` : '';
+
+    return `<div style="font-family:'Times New Roman',serif;padding:20px;color:#000;background:#fff;">
+        <div style="text-align:center;margin-bottom:20px">
+            ${logoHtml}
+            <h1 style="font-size:16pt;margin:0">SITE DAMAGE REPORT</h1>
+        </div>
+
+        <table border="1" cellpadding="6" style="width:100%;border-collapse:collapse;margin-bottom:12px">
+            <tr>
+                <td style="width:22%;border:1px solid #000;padding:6px"><strong>Project Name</strong></td>
+                <td style="border:1px solid #000;padding:6px" colspan="3">${escHtml(report.projName)}</td>
+                <td style="width:18%;border:1px solid #000;padding:6px"><strong>REF No</strong></td>
+                <td style="border:1px solid #000;padding:6px"><strong>${escHtml(report.refNo)}</strong></td>
+            </tr>
+            <tr>
+                <td style="border:1px solid #000;padding:6px"><strong>Sub-Contractor</strong></td>
+                <td style="border:1px solid #000;padding:6px" colspan="3">${escHtml(report.subcon||'N/A')}</td>
+                <td style="border:1px solid #000;padding:6px"><strong>Date</strong></td>
+                <td style="border:1px solid #000;padding:6px">${dateStr}</td>
+            </tr>
+            <tr>
+                <td style="border:1px solid #000;padding:6px"><strong>To (Main Contractor)</strong></td>
+                <td style="border:1px solid #000;padding:6px" colspan="5">${escHtml(report.mainCon||'N/A')}</td>
+            </tr>
+        </table>
+
+        <table border="1" cellpadding="6" style="width:100%;border-collapse:collapse;margin-bottom:12px">
+            <tr>
+                <td style="width:20%;border:1px solid #000;padding:6px"><strong>DAMAGED DATE</strong></td>
+                <td style="border:1px solid #000;padding:6px">${dateStr}</td>
+                <td style="width:20%;border:1px solid #000;padding:6px"><strong>LOCATION</strong></td>
+                <td style="border:1px solid #000;padding:6px">${escHtml(report.location)}</td>
+            </tr>
+            <tr>
+                <td style="border:1px solid #000;padding:6px"><strong>TIME</strong></td>
+                <td style="border:1px solid #000;padding:6px">${escHtml(report.damageTime||'N/A')}</td>
+                <td style="border:1px solid #000;padding:6px"><strong>Reported By</strong></td>
+                <td style="border:1px solid #000;padding:6px">${escHtml(report.createdByName||report.createdBy||'')}</td>
+            </tr>
+        </table>
+
+        <div style="margin-bottom:14px">
+            <p><strong>DETAILS:</strong></p>
+            <p style="margin-top:6px;margin-left:10px">${escHtml(report.description)}</p>
+        </div>
+
+        <h3 style="font-size:11pt;margin-bottom:8px">DAMAGED MATERIALS SUMMARY</h3>
+        <table border="1" cellpadding="6" style="width:100%;border-collapse:collapse;margin-bottom:14px">
+            <thead>
+                <tr style="background:#f0f0f0">
+                    <th style="border:1px solid #000;padding:6px">Material</th>
+                    <th style="border:1px solid #000;padding:6px;text-align:center">Qty</th>
+                    <th style="border:1px solid #000;padding:6px;text-align:center">Unit</th>
+                    <th style="border:1px solid #000;padding:6px;text-align:right">Unit Cost (AED)</th>
+                    <th style="border:1px solid #000;padding:6px;text-align:right">Total (AED)</th>
+                </tr>
+            </thead>
+            <tbody>${matRows}</tbody>
+            <tfoot>
+                <tr style="background:#f0f0f0">
+                    <td colspan="4" style="border:1px solid #000;padding:6px;text-align:right"><strong>Grand Total:</strong></td>
+                    <td style="border:1px solid #000;padding:6px;text-align:right"><strong>${total.toFixed(2)} AED</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+
+        ${notesHtml}
+        ${photosHtml}
+
+        <p style="margin-top:14px"><strong>Please consider this matter with high importance.</strong></p>
+
+        <table border="1" cellpadding="6" style="width:100%;border-collapse:collapse;margin-top:20px">
+            <tr><td style="width:30%;border:1px solid #000;padding:8px"><strong>CONTRACTOR'S COMMENTS</strong></td><td style="border:1px solid #000;padding:8px">&nbsp;</td></tr>
+        </table>
+        <table border="1" cellpadding="6" style="width:100%;border-collapse:collapse;margin-top:12px">
+            <tr>
+                <td style="width:10%;border:1px solid #000;padding:6px"><strong>For</strong></td>
+                <td style="width:35%;border:1px solid #000;padding:6px">&nbsp;</td>
+                <td style="width:12%;border:1px solid #000;padding:6px"><strong>Signed</strong></td>
+                <td style="width:28%;border:1px solid #000;padding:6px">&nbsp;</td>
+                <td style="width:8%;border:1px solid #000;padding:6px"><strong>Date</strong></td>
+                <td style="border:1px solid #000;padding:6px">&nbsp;</td>
+            </tr>
+        </table>
+        <div style="margin-top:20px;text-align:center;font-size:9pt;border-top:1px solid #ccc;padding-top:12px;color:#666">
+            This is a computer generated document. Ref: ${escHtml(report.refNo)}
+        </div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════
+function escHtml(str) {
+    if (!str && str !== 0) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(str) {
+    if (!str) return '';
+    return String(str).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>
