@@ -68,7 +68,10 @@
 </head>
 <body>
 
-<div class="loading" id="loading"><i class="fas fa-spinner spinner"></i><div>Processing...</div></div>
+<div class="loading" id="loading">
+    <i class="fas fa-spinner spinner"></i>
+    <div>Processing...</div>
+</div>
 
 <!-- Auth Page -->
 <div id="authPage" class="auth-container">
@@ -186,9 +189,23 @@ async function callAPI(action, params = {}) {
     } catch (error) { return { success: false, message: error.message }; }
 }
 
-function showToast(msg, isError = false) { const toast = document.createElement('div'); toast.className = `toast ${isError ? 'error' : ''}`; toast.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> ${msg}`; document.body.appendChild(toast); setTimeout(() => toast.remove(), 3000); }
-function showLoading(show) { document.getElementById('loading').classList.toggle('active', show); }
-function generateRefNo() { if (!currentProject) return 'SELECT-PROJECT-FIRST'; const nextNum = currentProject.nextNumber || 1; return `${currentProject.prefix}-DR-${String(nextNum).padStart(3, '0')}`; }
+function showToast(msg, isError = false) { 
+    const toast = document.createElement('div'); 
+    toast.className = `toast ${isError ? 'error' : ''}`; 
+    toast.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> ${msg}`; 
+    document.body.appendChild(toast); 
+    setTimeout(() => toast.remove(), 3000); 
+}
+
+function showLoading(show) { 
+    document.getElementById('loading').classList.toggle('active', show); 
+}
+
+function generateRefNo() { 
+    if (!currentProject) return 'SELECT-PROJECT-FIRST'; 
+    const nextNum = (currentProject.lastNumber || 0) + 1; 
+    return `${currentProject.prefix}-DR-${String(nextNum).padStart(3, '0')}`; 
+}
 
 // Authentication
 async function handleLogin() {
@@ -198,8 +215,15 @@ async function handleLogin() {
     showLoading(true);
     const result = await callAPI('login', { email, password });
     showLoading(false);
-    if (result.success) { currentUser = result.user; showMainApp(); showToast('Welcome ' + currentUser.fullName); loadProjects(); loadReports(); }
-    else { showToast(result.message || 'Login failed', true); }
+    if (result.success) { 
+        currentUser = result.user; 
+        showMainApp(); 
+        showToast('Welcome ' + currentUser.fullName); 
+        loadProjects(); 
+        loadReports(); 
+    } else { 
+        showToast(result.message || 'Login failed', true); 
+    }
 }
 
 async function handleRegister() {
@@ -207,34 +231,66 @@ async function handleRegister() {
     const email = document.getElementById('regEmail').value;
     const password = document.getElementById('regPassword').value;
     if (!name || !email || !password) { showToast('Please fill all fields', true); return; }
+    if (password.length < 6) { showToast('Password must be at least 6 characters', true); return; }
     showLoading(true);
     const result = await callAPI('register', { name, email, password, role: 'engineer' });
     showLoading(false);
-    if (result.success) { showToast('Registration successful! Please login.', false); showLogin(); document.getElementById('loginEmail').value = email; }
-    else { showToast(result.message || 'Registration failed', true); }
+    if (result.success) { 
+        showToast('Registration successful! Please login.', false); 
+        showLogin(); 
+        document.getElementById('loginEmail').value = email; 
+    } else { 
+        showToast(result.message || 'Registration failed', true); 
+    }
 }
 
-function showRegister() { document.getElementById('loginForm').style.display = 'none'; document.getElementById('registerForm').style.display = 'block'; }
-function showLogin() { document.getElementById('loginForm').style.display = 'block'; document.getElementById('registerForm').style.display = 'none'; }
+function showRegister() { 
+    document.getElementById('loginForm').style.display = 'none'; 
+    document.getElementById('registerForm').style.display = 'block'; 
+}
+
+function showLogin() { 
+    document.getElementById('loginForm').style.display = 'block'; 
+    document.getElementById('registerForm').style.display = 'none'; 
+}
+
 function showMainApp() {
     document.getElementById('authPage').style.display = 'none';
     document.getElementById('mainApp').style.display = 'block';
     document.getElementById('userNameDisplay').innerHTML = `<i class="fas fa-user-circle"></i> ${currentUser.fullName} (${currentUser.role})`;
-    if (currentUser.role === 'admin') { document.getElementById('adminTabBtn').style.display = 'inline-block'; document.getElementById('projectsTabBtn').style.display = 'inline-block'; }
+    if (currentUser.role === 'admin') { 
+        document.getElementById('adminTabBtn').style.display = 'inline-block'; 
+        document.getElementById('projectsTabBtn').style.display = 'inline-block'; 
+    }
 }
-function logout() { currentUser = null; currentPhotos = []; document.getElementById('authPage').style.display = 'flex'; document.getElementById('mainApp').style.display = 'none'; showLogin(); }
+
+function logout() { 
+    currentUser = null; 
+    currentPhotos = []; 
+    document.getElementById('authPage').style.display = 'flex'; 
+    document.getElementById('mainApp').style.display = 'none'; 
+    showLogin(); 
+}
 
 // Project Management
 async function loadProjects() {
     const result = await callAPI('getProjects', {});
-    if (result.success) { projects = result.projects || []; renderProjectList(); if (currentUser.role === 'admin') renderAdminProjects(); }
-    else { projects = []; }
+    if (result.success) { 
+        projects = result.projects || []; 
+        renderProjectList(); 
+        if (currentUser?.role === 'admin') renderAdminProjects(); 
+    } else { 
+        projects = []; 
+    }
 }
 
 function renderProjectList() {
     const container = document.getElementById('projectList');
     if (!container) return;
-    if (projects.length === 0) { container.innerHTML = '<p style="color:#64748b;">No projects available. Contact admin to create projects.</p>'; return; }
+    if (projects.length === 0) { 
+        container.innerHTML = '<p style="color:#64748b;">No projects available. Contact admin to create projects.</p>'; 
+        return; 
+    }
     container.innerHTML = projects.map(p => `<div class="project-card" onclick="selectProject('${p.id}')"><strong><i class="fas fa-folder"></i> ${p.name}</strong><br><small>Prefix: ${p.prefix} | Last Number: ${p.lastNumber || 0}</small></div>`).join('');
 }
 
@@ -247,7 +303,7 @@ function selectProject(projectId) {
         document.getElementById('projName').value = currentProject.name;
         const nextNum = (currentProject.lastNumber || 0) + 1;
         document.getElementById('refNo').value = `${currentProject.prefix}-DR-${String(nextNum).padStart(3, '0')}`;
-        document.getElementById('projectList').querySelectorAll('.project-card').forEach(card => card.classList.remove('selected'));
+        document.querySelectorAll('.project-card').forEach(card => card.classList.remove('selected'));
         event.currentTarget.classList.add('selected');
     }
 }
@@ -260,20 +316,29 @@ async function createProject() {
     showLoading(true);
     const result = await callAPI('createProject', { name, prefix, startNumber: startNum });
     showLoading(false);
-    if (result.success) { showToast('Project created successfully!'); document.getElementById('newProjectName').value = ''; loadProjects(); }
-    else { showToast(result.message || 'Creation failed', true); }
+    if (result.success) { 
+        showToast('Project created successfully!'); 
+        document.getElementById('newProjectName').value = ''; 
+        loadProjects(); 
+    } else { 
+        showToast(result.message || 'Creation failed', true); 
+    }
 }
 
 function renderAdminProjects() {
     const container = document.getElementById('projectsList');
     if (!container) return;
-    container.innerHTML = projects.map(p => `<div class="card" style="margin-bottom:12px;"><div style="display:flex; justify-content:space-between; align-items:center;"><div><strong>${p.name}</strong><br><small>Prefix: ${p.prefix} | Reports: ${p.reportCount || 0} | Last #: ${p.lastNumber || 0}</small></div></div></div>`).join('');
+    container.innerHTML = projects.map(p => `<div class="card" style="margin-bottom:12px;"><div><strong>${p.name}</strong><br><small>Prefix: ${p.prefix} | Reports: ${p.reportCount || 0} | Last #: ${p.lastNumber || 0}</small></div></div>`).join('');
 }
 
 // Report Functions
 async function loadReports() {
     const result = await callAPI('getReports', {});
-    if (result.success) { allReports = result.reports || []; renderMyReports(); if (currentUser?.role === 'admin') renderAdminReportsTable(); }
+    if (result.success) { 
+        allReports = result.reports || []; 
+        renderMyReports(); 
+        if (currentUser?.role === 'admin') renderAdminReportsTable(); 
+    }
 }
 
 function renderMyReports() {
@@ -294,8 +359,12 @@ async function approveReport(reportId) {
     showLoading(true);
     const result = await callAPI('updateReport', { reportId, status: 'approved' });
     showLoading(false);
-    if (result.success) { showToast('Report approved!'); loadReports(); }
-    else { showToast('Failed', true); }
+    if (result.success) { 
+        showToast('Report approved!'); 
+        loadReports(); 
+    } else { 
+        showToast('Failed', true); 
+    }
 }
 
 // Export Functions
@@ -321,21 +390,119 @@ function exportAsWord(reportId) {
 document.getElementById('damageForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentProject) { showToast('Please select a project first', true); return; }
-    const materials = []; document.querySelectorAll('#materialsList .material-row').forEach(row => { const name = row.querySelector('.mat-name')?.value; if (name && name.trim()) materials.push({ name: name.trim(), qty: row.querySelector('.mat-qty')?.value || '', unit: row.querySelector('.mat-unit')?.value || '', cost: row.querySelector('.mat-cost')?.value || '' }); });
+    const materials = []; 
+    document.querySelectorAll('#materialsList .material-row').forEach(row => { 
+        const name = row.querySelector('.mat-name')?.value; 
+        if (name && name.trim()) materials.push({ name: name.trim(), qty: row.querySelector('.mat-qty')?.value || '', unit: row.querySelector('.mat-unit')?.value || '', cost: row.querySelector('.mat-cost')?.value || '' }); 
+    });
     if (materials.length === 0) { showToast('Add at least one material', true); return; }
-    const reportData = { refNo: document.getElementById('refNo').value, projName: document.getElementById('projName').value, location: document.getElementById('location').value, damageDate: document.getElementById('damageDate').value, damageTime: document.getElementById('damageTime').value, description: document.getElementById('description').value, subcon: document.getElementById('subcon').value, mainCon: document.getElementById('mainCon').value, materials, notes: document.getElementById('notes').value, photos: currentPhotos, createdBy: currentUser.email, createdByName: currentUser.fullName, projectId: currentProject.id };
+    const reportData = { 
+        refNo: document.getElementById('refNo').value, 
+        projName: document.getElementById('projName').value, 
+        location: document.getElementById('location').value, 
+        damageDate: document.getElementById('damageDate').value, 
+        damageTime: document.getElementById('damageTime').value, 
+        description: document.getElementById('description').value, 
+        subcon: document.getElementById('subcon').value, 
+        mainCon: document.getElementById('mainCon').value, 
+        materials, 
+        notes: document.getElementById('notes').value, 
+        photos: currentPhotos, 
+        createdBy: currentUser.email, 
+        createdByName: currentUser.fullName, 
+        projectId: currentProject.id 
+    };
     showLoading(true);
     const result = await callAPI('submitReport', { data: JSON.stringify(reportData) });
     showLoading(false);
     if (result.success) {
         showToast(`Report ${reportData.refNo} submitted!`);
-        document.getElementById('damageForm').reset(); currentPhotos = []; document.getElementById('photoPreview').innerHTML = '';
-        document.getElementById('refNo').value = generateRefNo(); document.getElementById('projName').value = currentProject.name;
-        document.querySelectorAll('#materialsList .material-row').forEach((row, idx) => { if (idx > 0) row.remove(); else { row.querySelector('.mat-name').value = ''; row.querySelector('.mat-qty').value = ''; row.querySelector('.mat-unit').value = ''; row.querySelector('.mat-cost').value = ''; } });
-        loadReports(); loadProjects();
-    } else { showToast(result.message || 'Submission failed', true); }
+        document.getElementById('damageForm').reset(); 
+        currentPhotos = []; 
+        document.getElementById('photoPreview').innerHTML = '';
+        document.getElementById('refNo').value = generateRefNo(); 
+        document.getElementById('projName').value = currentProject.name;
+        document.querySelectorAll('#materialsList .material-row').forEach((row, idx) => { 
+            if (idx > 0) row.remove(); 
+            else { 
+                row.querySelector('.mat-name').value = ''; 
+                row.querySelector('.mat-qty').value = ''; 
+                row.querySelector('.mat-unit').value = ''; 
+                row.querySelector('.mat-cost').value = ''; 
+            } 
+        });
+        loadReports(); 
+        loadProjects();
+    } else { 
+        showToast(result.message || 'Submission failed', true); 
+    }
 });
 
-function addMaterialRow() { const container = document.getElementById('materialsList'); const div = document.createElement('div'); div.className = 'material-row'; div.innerHTML = `<input type="text" placeholder="Material" class="mat-name"><input type="text" placeholder="Qty" class="mat-qty"><input type="text" placeholder="Unit" class="mat-unit"><input type="text" placeholder="Cost" class="mat-cost"><button type="button" onclick="this.parentElement.remove()" style="background:#ef4444; color:white; border:none; padding:8px 15px; border-radius:8px;">✕</button>`; container.appendChild(div); }
-function handlePhotoUpload(input) { const files = Array.from(input.files); if (currentPhotos.length + files.length > 5) { showToast('Max 5 photos', true); return; } files.forEach(file => { const reader = new FileReader(); reader.onload = e => { currentPhotos.push(e.target.result); updatePhotoPreview(); }; reader.readAsDataURL(file); }); input.value = ''; }
-function updatePhotoPreview() { const preview = document.getElementById('photoPreview'); preview.innerHTML = ''; currentPhotos.forEach((photo, idx) => { const div = document.createElement('div'); div.style.position = 'relative'; div.innerHTML = `<img src="${photo}" class="preview-img"><button onclick="removePhoto(${idx})" style="position:absolute;
+function addMaterialRow() { 
+    const container = document.getElementById('materialsList'); 
+    const div = document.createElement('div'); 
+    div.className = 'material-row'; 
+    div.innerHTML = `<input type="text" placeholder="Material" class="mat-name"><input type="text" placeholder="Qty" class="mat-qty"><input type="text" placeholder="Unit" class="mat-unit"><input type="text" placeholder="Cost" class="mat-cost"><button type="button" onclick="this.parentElement.remove()" style="background:#ef4444; color:white; border:none; padding:8px 15px; border-radius:8px;">✕</button>`; 
+    container.appendChild(div); 
+}
+
+function handlePhotoUpload(input) { 
+    const files = Array.from(input.files); 
+    if (currentPhotos.length + files.length > 5) { showToast('Max 5 photos', true); return; } 
+    files.forEach(file => { 
+        const reader = new FileReader(); 
+        reader.onload = e => { 
+            currentPhotos.push(e.target.result); 
+            updatePhotoPreview(); 
+        }; 
+        reader.readAsDataURL(file); 
+    }); 
+    input.value = ''; 
+}
+
+function updatePhotoPreview() { 
+    const preview = document.getElementById('photoPreview'); 
+    preview.innerHTML = ''; 
+    currentPhotos.forEach((photo, idx) => { 
+        const div = document.createElement('div'); 
+        div.style.position = 'relative'; 
+        div.style.display = 'inline-block'; 
+        div.style.margin = '5px'; 
+        div.innerHTML = `<img src="${photo}" class="preview-img"><button onclick="removePhoto(${idx})" style="position:absolute; top:-8px; right:-8px; background:#ef4444; color:white; border:none; border-radius:50%; width:22px; height:22px; cursor:pointer;">✕</button>`; 
+        preview.appendChild(div); 
+    }); 
+}
+
+function removePhoto(idx) { 
+    currentPhotos.splice(idx, 1); 
+    updatePhotoPreview(); 
+}
+
+// Tab switching
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (btn.dataset.mode === 'admin' && currentUser?.role === 'admin') {
+            document.getElementById('adminView').style.display = 'block';
+            document.getElementById('engineerView').style.display = 'none';
+            document.getElementById('projectsView').style.display = 'none';
+            loadReports();
+        } else if (btn.dataset.mode === 'projects' && currentUser?.role === 'admin') {
+            document.getElementById('adminView').style.display = 'none';
+            document.getElementById('engineerView').style.display = 'none';
+            document.getElementById('projectsView').style.display = 'block';
+            loadProjects();
+        } else {
+            document.getElementById('adminView').style.display = 'none';
+            document.getElementById('engineerView').style.display = 'block';
+            document.getElementById('projectsView').style.display = 'none';
+        }
+    });
+});
+
+// Initialize
+generateRefNo();
+</script>
+</body>
+</html>
